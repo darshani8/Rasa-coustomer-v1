@@ -1,6 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { VENDORS, HOME_ORDER, fmt } from './data.js';
 import { s } from './lib/style.js';
+import {
+  isAuthenticated,
+  login,
+  register,
+  verifyOtp,
+  resendOtp,
+  logout,
+  listVendors,
+  getVendor,
+  listMenu,
+  vendorRatingSummary,
+  createOrder,
+  getOrder,
+  getQueue,
+  paiseToRupees,
+} from './api.js';
 
 /* ---- Theme (Rasa maroon / olive / cream) ---- */
 const P = {
@@ -23,44 +39,311 @@ const I = {
   check: <path d="m5 12 5 5 9-10" />,
   x: <path d="M18 6 6 18M6 6l12 12" />,
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+  user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
 };
 function Svg({ d, size = 18, stroke = P.ink, w = 2.2, fill = 'none', style }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={w} style={style}>{d}</svg>;
 }
 
+/* ---- Placeholder image (data URI grey rect, no network needed) ---- */
+const PLACEHOLDER_IMG = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22600%22 height=%22300%22%3E%3Crect width=%22600%22 height=%22300%22 fill=%22%23EEE9E0%22/%3E%3C/svg%3E';
+
+/* ---- Shape a live Vendor API response into the shape the UI needs ---- */
+function shapeVendor(apiVendor, ratingData) {
+  // The backend Vendor has: id, name, location, defaultPrepMinutes, isActive, status,
+  // maxActiveOrders, maxReadyOrders, acceptingOrders.
+  // Everything else (banner, cuisine, area, diet, etc.) is UI-only — we fall back to
+  // the mock vendor if one with a matching name exists, otherwise use safe defaults.
+  const mockMatch = Object.values(VENDORS).find(
+    (mv) => mv.name.toLowerCase() === apiVendor.name.toLowerCase()
+  );
+  const stars = ratingData?.averageStars != null ? Number(ratingData.averageStars).toFixed(1) : null;
+  const ratingCount = ratingData?.count != null ? String(ratingData.count) : '0';
+  return {
+    // live fields
+    id: apiVendor.id,
+    name: apiVendor.name,
+    acceptingOrders: apiVendor.acceptingOrders,
+    isActive: apiVendor.isActive,
+    defaultPrepMinutes: apiVendor.defaultPrepMinutes,
+    location: apiVendor.location,
+    // derived / fallback fields for the UI
+    banner: mockMatch?.banner || PLACEHOLDER_IMG,
+    cuisine: mockMatch?.cuisine || 'Food Truck',
+    area: mockMatch?.area || (apiVendor.location ? `${apiVendor.location.lat.toFixed(4)}, ${apiVendor.location.lng.toFixed(4)}` : 'Location TBD'),
+    diet: mockMatch?.diet || 'all',
+    wait: apiVendor.defaultPrepMinutes || mockMatch?.wait || 15,
+    open: apiVendor.acceptingOrders ? 'Open now · accepting orders' : 'Closed · not accepting orders',
+    rating: stars || mockMatch?.rating || '4.5',
+    ratings: ratingCount,
+    price: mockMatch?.price || '₹₹',
+    about: mockMatch?.about || `${apiVendor.name} — a great food truck accepting orders online.`,
+    hoursWk: mockMatch?.hoursWk || '10:00 – 22:00',
+    hoursWe: mockMatch?.hoursWe || '10:00 – 23:00',
+    phone: mockMatch?.phone || '+91 98765 00000',
+    address: mockMatch?.address || 'Rotating location',
+    reviews: mockMatch?.reviews || [],
+    // live menu items loaded separately; start empty
+    items: [],
+  };
+}
+
+/* ---- Shape a live MenuItem into the UI item shape ---- */
+function shapeMenuItem(apiItem) {
+  // Backend MenuItem: { id, vendorId, name, pricePaise, prepMinutes, isAvailable, ... }
+  // UI needs: id, name, price (rupees number), cat, img, desc
+  return {
+    id: apiItem.id,
+    name: apiItem.name,
+    price: paiseToRupees(apiItem.pricePaise),
+    // No category on backend MenuItem — use a single synthetic category per vendor
+    cat: 'Menu',
+    // No image on backend — use placeholder
+    img: PLACEHOLDER_IMG,
+    // No description on backend
+    desc: `Prep time: ${apiItem.prepMinutes} min`,
+  };
+}
+
 /* ============================ APP ============================ */
 export default function App() {
+  // ---- auth state ----
+  const [authed, setAuthed] = useState(() => isAuthenticated());
+
+  // When the user logs in from the Login screen we re-check
+  const onAuthChange = useCallback(() => {
+    setAuthed(isAuthenticated());
+  }, []);
+
+  if (!authed) {
+    return (
+      <div style={s('min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px 48px')}>
+        <Phone screen="login" ctx={{ onAuthChange }} />
+      </div>
+    );
+  }
+
+  return <MainApp onAuthChange={onAuthChange} />;
+}
+
+/* ---- The real app (rendered only when authed) ---- */
+function MainApp({ onAuthChange }) {
   const [screen, setScreen] = useState('home');
-  const [vendorId, setVendorId] = useState('camion');
+  const [vendorId, setVendorId] = useState(null);          // live UUID or mock key
+  const [vendorIdIsLive, setVendorIdIsLive] = useState(false);
   const [tab, setTab] = useState('Menu');
-  const [cart, setCart] = useState({});
+  const [cart, setCart] = useState({});                    // { [menuItemId]: quantity }
   const [payMethod, setPayMethod] = useState('visa');
-  const [qSec, setQSec] = useState(765);
+  const [qSec, setQSec] = useState(765);                   // local countdown fallback
   const [diet, setDiet] = useState('all');
   const [installEvt, setInstallEvt] = useState(null);
 
+  // ---- live data state ----
+  // Live vendor list (from GET /vendors). null = not yet loaded.
+  const [liveVendors, setLiveVendors] = useState(null);
+  const [vendorsLoading, setVendorsLoading] = useState(false);
+
+  // Currently viewed vendor (may be shaped from live or mock)
+  const [currentVendor, setCurrentVendor] = useState(null);
+  const [vendorLoading, setVendorLoading] = useState(false);
+
+  // Active order placed via createOrder()
+  const [activeOrderId, setActiveOrderId] = useState(null);
+  const [activeOrder, setActiveOrder] = useState(null);
+
+  // Live queue snapshot
+  const [queueSnapshot, setQueueSnapshot] = useState(null);
+
+  // Error banner (shown dismissably at screen top)
+  const [apiError, setApiError] = useState(null);
+
+  // ---- local countdown (UI only, replaced by real data when queue loads) ----
   useEffect(() => {
     const t = setInterval(() => setQSec((x) => (x > 0 ? x - 1 : 0)), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // ---- install prompt ----
   useEffect(() => {
     const h = (e) => { e.preventDefault(); setInstallEvt(e); };
     window.addEventListener('beforeinstallprompt', h);
     return () => window.removeEventListener('beforeinstallprompt', h);
   }, []);
 
-  const v = VENDORS[vendorId] || VENDORS.camion;
+  // ---- load vendor list when Home is shown ----
+  useEffect(() => {
+    if (screen !== 'home') return;
+    let cancelled = false;
+    setVendorsLoading(true);
+    listVendors({ limit: 30 })
+      .then(async (res) => {
+        if (cancelled) return;
+        // Fetch rating summaries in parallel (best-effort — tolerate failure)
+        const vendors = res?.data || [];
+        const withRatings = await Promise.all(
+          vendors.map(async (v) => {
+            try {
+              const rating = await vendorRatingSummary(v.id);
+              return shapeVendor(v, rating);
+            } catch {
+              return shapeVendor(v, null);
+            }
+          })
+        );
+        setLiveVendors(withRatings);
+      })
+      .catch(() => {
+        if (!cancelled) setApiError('Could not load vendors. Showing demo data.');
+      })
+      .finally(() => { if (!cancelled) setVendorsLoading(false); });
+    return () => { cancelled = true; };
+  }, [screen]);
+
+  // ---- load vendor + menu when Vendor screen opens ----
+  const loadVendorScreen = useCallback(async (id, isLive) => {
+    setVendorLoading(true);
+    setCurrentVendor(null);
+    setApiError(null);
+    try {
+      if (isLive) {
+        const [apiVendor, menuRes, ratingData] = await Promise.all([
+          getVendor(id),
+          listMenu(id),
+          vendorRatingSummary(id).catch(() => null),
+        ]);
+        const shaped = shapeVendor(apiVendor, ratingData);
+        // Replace items with live menu items (available only — the API already filters)
+        shaped.items = (menuRes?.items || []).map(shapeMenuItem);
+        setCurrentVendor(shaped);
+      } else {
+        // Mock vendor
+        setCurrentVendor(VENDORS[id] || VENDORS.camion);
+      }
+    } catch (err) {
+      setApiError('Could not load vendor details.');
+      // Fall back to mock if possible
+      setCurrentVendor(VENDORS[id] || VENDORS.camion);
+    } finally {
+      setVendorLoading(false);
+    }
+  }, []);
+
+  // ---- queue + order polling (every 5 s while on queue screen) ----
+  useEffect(() => {
+    if (screen !== 'queue') return;
+    if (!activeOrderId || !currentVendor) return;
+
+    const vidForQueue = vendorIdIsLive ? vendorId : null;
+    if (!vidForQueue) return; // no live vendor UUID — stay on mock UI
+
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const [order, queue] = await Promise.all([
+          getOrder(activeOrderId),
+          getQueue(vidForQueue),
+        ]);
+        if (cancelled) return;
+        setActiveOrder(order);
+        setQueueSnapshot(queue);
+      } catch {
+        // silently ignore poll errors — the UI keeps its last state
+      }
+    };
+
+    poll(); // immediate first fetch
+    const t = setInterval(poll, 5000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [screen, activeOrderId, vendorId, vendorIdIsLive, currentVendor]);
+
+  // ---- derived vendor (current) ----
+  const v = currentVendor || (vendorId ? (VENDORS[vendorId] || VENDORS.camion) : VENDORS.camion);
+
+  // ---- cart helpers ----
   const add = (id) => setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 }));
-  const remove = (id) => setCart((c) => { const n = { ...c }; const q = (n[id] || 0) - 1; if (q <= 0) delete n[id]; else n[id] = q; return n; });
-  const openVendor = (id) => { setVendorId(id); setTab('Menu'); setScreen('vendor'); };
+  const remove = (id) => setCart((c) => {
+    const n = { ...c };
+    const q = (n[id] || 0) - 1;
+    if (q <= 0) delete n[id];
+    else n[id] = q;
+    return n;
+  });
+
+  const openVendor = (id, isLive = false) => {
+    setVendorId(id);
+    setVendorIdIsLive(isLive);
+    setTab('Menu');
+    setCart({});
+    setScreen('vendor');
+    loadVendorScreen(id, isLive);
+  };
+
   const go = (sc) => setScreen(sc);
 
   const cartCount = Object.values(cart).reduce((a, n) => a + n, 0);
-  const subtotal = Object.keys(VENDORS).reduce((acc, vid) => acc + VENDORS[vid].items.reduce((a, it) => a + (cart[it.id] || 0) * it.price, 0), 0);
+
+  // When using live menu items, compute subtotal from real paise prices
+  const subtotal = (() => {
+    if (v && v.items && v.items.length > 0) {
+      return v.items.reduce((acc, it) => acc + (cart[it.id] || 0) * it.price, 0);
+    }
+    // mock fallback
+    return Object.keys(VENDORS).reduce(
+      (acc, vid) => acc + VENDORS[vid].items.reduce((a, it) => a + (cart[it.id] || 0) * it.price, 0), 0
+    );
+  })();
   const bSub = subtotal > 0 ? subtotal : 360;
   const fee = 18, disc = Math.round(bSub * 0.15), total = bSub + fee - disc;
 
-  const ctx = { v, vendorId, cart, add, remove, openVendor, go, tab, setTab, payMethod, setPayMethod, qSec, diet, setDiet, cartCount, money: { bSub, fee, disc, total }, installEvt, setInstallEvt };
+  // ---- queue position derived from live data ----
+  // position is 0-based in entries[]; ahead = position (0 means you're next)
+  const myQueueEntry = queueSnapshot?.entries?.find((e) => e.orderId === activeOrderId);
+  const livePosition = myQueueEntry?.position ?? null;       // 0-based
+  const liveAhead = livePosition != null ? livePosition : null;
+  const liveNowServingOrderId = queueSnapshot?.nowServingOrderId ?? null;
+
+  // ---- join queue (place order) ----
+  const handleJoinQueue = async () => {
+    if (!vendorIdIsLive) {
+      // Mock path — just navigate
+      go('queue');
+      return;
+    }
+    const items = Object.entries(cart).map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
+    if (items.length === 0) {
+      go('queue');
+      return;
+    }
+    try {
+      const order = await createOrder({ vendorId, items });
+      setActiveOrderId(order.id);
+      setActiveOrder(order);
+      go('queue');
+    } catch (err) {
+      setApiError(err.message || 'Could not place order. Please try again.');
+    }
+  };
+
+  // ---- logout ----
+  const handleLogout = async () => {
+    try { await logout(); } catch { /* already cleared */ }
+    onAuthChange();
+  };
+
+  const ctx = {
+    v, vendorId, vendorIdIsLive, cart, add, remove, openVendor, go, tab, setTab,
+    payMethod, setPayMethod, qSec, diet, setDiet, cartCount,
+    money: { bSub, fee, disc, total },
+    installEvt, setInstallEvt,
+    // live data
+    liveVendors, vendorsLoading,
+    vendorLoading,
+    activeOrderId, activeOrder,
+    queueSnapshot, liveAhead, liveNowServingOrderId,
+    handleJoinQueue,
+    handleLogout,
+    apiError, setApiError,
+  };
 
   return (
     <div style={s('min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px 48px')}>
@@ -78,6 +361,7 @@ function Phone({ screen, ctx }) {
       <div style={s('width:100%;height:100%;background:' + P.paper + ';border-radius:46px;overflow:hidden;position:relative;display:flex;flex-direction:column')}>
         <StatusBar />
         <div ref={scrollRef} className="scr" style={s('flex:1;overflow-y:auto;overflow-x:hidden;position:relative')}>
+          {screen === 'login' && <Login ctx={ctx} />}
           {screen === 'home' && <Home ctx={ctx} />}
           {screen === 'vendor' && <Vendor ctx={ctx} />}
           {screen === 'queue' && <Queue ctx={ctx} />}
@@ -127,17 +411,263 @@ function TruckBanner({ src, h = 148, children }) {
   );
 }
 
+/* ---- Error banner ---- */
+function ErrorBanner({ message, onDismiss }) {
+  if (!message) return null;
+  return (
+    <div style={s('display:flex;align-items:center;justify-content:space-between;gap:8px;background:#FBE7EC;border:1px solid ' + P.pborder + ';border-radius:12px;padding:10px 14px;margin:8px 18px 0')}>
+      <span style={s("font:500 12px 'Inter';color:" + P.primary + ';flex:1')}>{message}</span>
+      <button onClick={onDismiss} style={s('background:none;border:none;cursor:pointer;color:' + P.primary + ';flex-shrink:0;padding:2px')}><Svg d={I.x} size={16} stroke={P.primary} /></button>
+    </div>
+  );
+}
+
+/* ---- Loading spinner ---- */
+function Spinner() {
+  return (
+    <div style={s('display:flex;align-items:center;justify-content:center;padding:40px 0')}>
+      <div style={s('width:28px;height:28px;border-radius:50%;border:3px solid ' + P.soft + ';border-top-color:' + P.primary + ';animation:rasaSpin .7s linear infinite')} />
+    </div>
+  );
+}
+
+/* ============================ LOGIN / REGISTER ============================ */
+function Login({ ctx }) {
+  const { onAuthChange } = ctx;
+  const [mode, setMode] = useState('login');   // 'login' | 'register' | 'otp'
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+
+  const inputStyle = s('width:100%;background:#fff;border:1.5px solid ' + P.border + ';border-radius:14px;padding:14px 16px;font:500 14px \'Inter\';color:' + P.ink + ';outline:none;box-sizing:border-box');
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(''); setPending(true);
+    try {
+      await login({ phone, password });
+      onAuthChange();
+    } catch (err) {
+      setError(err.message || 'Login failed. Check your credentials.');
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError(''); setPending(true);
+    try {
+      await register({ phone, password });
+      setInfo('Account created! Check the server terminal for your 6-digit OTP.');
+      setMode('otp');
+    } catch (err) {
+      setError(err.message || 'Registration failed.');
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setError(''); setPending(true);
+    try {
+      await verifyOtp({ phone, otp });
+      onAuthChange();
+    } catch (err) {
+      setError(err.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError('');
+    try {
+      await resendOtp({ phone });
+      setInfo('A new OTP has been sent.');
+    } catch (err) {
+      setError(err.message || 'Could not resend OTP.');
+    }
+  };
+
+  return (
+    <div style={s('animation:rasaFade .35s ease;display:flex;flex-direction:column;min-height:100%;padding:24px 22px 32px')}>
+      {/* header */}
+      <div style={s('text-align:center;margin-bottom:32px;padding-top:12px')}>
+        <div style={s('width:60px;height:60px;border-radius:20px;background:' + P.primary + ';display:flex;align-items:center;justify-content:center;margin:0 auto 16px')}>
+          <Svg d={I.bag} size={28} stroke="#fff" w={2} />
+        </div>
+        <div style={s('font:700 26px ' + DISPLAY + ';color:' + P.ink + ';letter-spacing:-.4px')}>Rasa</div>
+        <div style={s("font:500 12.5px 'Inter';color:#9A93A6;margin-top:4px")}>Order ahead · skip the queue</div>
+      </div>
+
+      {/* tab switcher (login / register) */}
+      {mode !== 'otp' && (
+        <div style={s('display:flex;background:#fff;border:1px solid ' + P.border + ';border-radius:14px;padding:4px;margin-bottom:24px')}>
+          {['login', 'register'].map((m) => (
+            <button
+              key={m}
+              onClick={() => { setMode(m); setError(''); setInfo(''); }}
+              style={s('flex:1;padding:10px;border-radius:11px;border:none;cursor:pointer;font:700 13px \'Inter\';transition:all .15s;' + (mode === m ? 'background:' + P.primary + ';color:#fff' : 'background:transparent;color:#9A93A6'))}
+            >
+              {m === 'login' ? 'Log in' : 'Sign up'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* error / info */}
+      {error && (
+        <div style={s('background:#FBE7EC;border:1px solid ' + P.pborder + ';border-radius:12px;padding:10px 14px;margin-bottom:16px;font:500 12.5px \'Inter\';color:' + P.primary)}>
+          {error}
+        </div>
+      )}
+      {info && (
+        <div style={s('background:' + P.asoft + ';border:1px solid ' + P.adeep + '40;border-radius:12px;padding:10px 14px;margin-bottom:16px;font:500 12.5px \'Inter\';color:' + P.adeep)}>
+          {info}
+        </div>
+      )}
+
+      {/* OTP entry */}
+      {mode === 'otp' && (
+        <form onSubmit={handleVerifyOtp} style={s('display:flex;flex-direction:column;gap:14px')}>
+          <div style={s("font:600 11px 'JetBrains Mono',monospace;letter-spacing:.8px;text-transform:uppercase;color:#A39BB0;margin-bottom:2px")}>Verify your phone</div>
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="Enter the 6-digit OTP"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 10))}
+            style={inputStyle}
+            required
+          />
+          <button
+            type="submit"
+            disabled={pending || otp.length < 4}
+            style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:14px;padding:16px;font:700 14px ' + DISPLAY + ';cursor:pointer;opacity:' + (pending ? '.6' : '1'))}
+          >
+            {pending ? 'Verifying…' : 'Verify OTP'}
+          </button>
+          <div style={s('text-align:center')}>
+            <span onClick={handleResendOtp} style={s("font:600 12px 'Inter';color:" + P.primary + ';cursor:pointer;text-decoration:underline;text-underline-offset:2px')}>
+              Resend OTP
+            </span>
+          </div>
+          <div style={s('text-align:center')}>
+            <span onClick={() => { setMode('register'); setError(''); setInfo(''); }} style={s("font:600 12px 'Inter';color:#9A93A6;cursor:pointer")}>
+              Back
+            </span>
+          </div>
+        </form>
+      )}
+
+      {/* login form */}
+      {mode === 'login' && (
+        <form onSubmit={handleLogin} style={s('display:flex;flex-direction:column;gap:14px')}>
+          <div>
+            <div style={s("font:600 11px 'JetBrains Mono',monospace;letter-spacing:.8px;text-transform:uppercase;color:#A39BB0;margin-bottom:8px")}>Phone number</div>
+            <input
+              type="tel"
+              placeholder="+91 98765 43210"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              style={inputStyle}
+              required
+            />
+          </div>
+          <div>
+            <div style={s("font:600 11px 'JetBrains Mono',monospace;letter-spacing:.8px;text-transform:uppercase;color:#A39BB0;margin-bottom:8px")}>Password</div>
+            <input
+              type="password"
+              placeholder="Min 8 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={inputStyle}
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={pending}
+            style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:14px;padding:16px;font:700 14px ' + DISPLAY + ';cursor:pointer;margin-top:4px;opacity:' + (pending ? '.6' : '1'))}
+          >
+            {pending ? 'Logging in…' : 'Log in'}
+          </button>
+        </form>
+      )}
+
+      {/* register form */}
+      {mode === 'register' && (
+        <form onSubmit={handleRegister} style={s('display:flex;flex-direction:column;gap:14px')}>
+          <div>
+            <div style={s("font:600 11px 'JetBrains Mono',monospace;letter-spacing:.8px;text-transform:uppercase;color:#A39BB0;margin-bottom:8px")}>Phone number</div>
+            <input
+              type="tel"
+              placeholder="+91 98765 43210"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              style={inputStyle}
+              required
+            />
+          </div>
+          <div>
+            <div style={s("font:600 11px 'JetBrains Mono',monospace;letter-spacing:.8px;text-transform:uppercase;color:#A39BB0;margin-bottom:8px")}>Password</div>
+            <input
+              type="password"
+              placeholder="Min 8 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={inputStyle}
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={pending}
+            style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:14px;padding:16px;font:700 14px ' + DISPLAY + ';cursor:pointer;margin-top:4px;opacity:' + (pending ? '.6' : '1'))}
+          >
+            {pending ? 'Creating account…' : 'Create account'}
+          </button>
+          <div style={s("font:500 11px 'Inter';color:#A39BB0;text-align:center;line-height:1.5")}>
+            After creating your account you will receive an OTP to verify your phone number.
+          </div>
+        </form>
+      )}
+
+      {/* demo note */}
+      <div style={s('margin-top:auto;padding-top:24px;text-align:center')}>
+        <div style={s("font:500 11px 'Inter';color:#C4BDD4;line-height:1.5")}>
+          Logging in connects you to the live backend. Without a token the visual demo is shown with mock data.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ============================ HOME ============================ */
 function Home({ ctx }) {
-  const { openVendor, diet, setDiet, installEvt, setInstallEvt } = ctx;
+  const { openVendor, diet, setDiet, installEvt, setInstallEvt, liveVendors, vendorsLoading, handleLogout, apiError, setApiError } = ctx;
   const dietMeta = { all: { label: 'All trucks', accent: P.primary }, veg: { label: 'Pure Veg', accent: '#2F8F4E' }, nonveg: { label: 'Non-veg', accent: '#C0392B' } };
   const order = ['all', 'veg', 'nonveg'];
   const next = order[(order.indexOf(diet) + 1) % 3];
   const dm = dietMeta[diet];
-  const vendors = HOME_ORDER.map((id) => VENDORS[id]).filter((vd) => diet === 'all' || vd.diet === diet);
+
+  // Choose between live vendors and mock fallback
+  const vendors = liveVendors
+    ? liveVendors.filter((vd) => diet === 'all' || vd.diet === diet)
+    : HOME_ORDER.map((id) => VENDORS[id]).filter((vd) => diet === 'all' || vd.diet === diet);
+
+  const isLiveMode = !!liveVendors;
+
   const cats = [
-    { name: 'Chaat', img: VENDORS.chaat.items[0].img }, { name: 'Biryani', img: VENDORS.camion.items[0].img },
-    { name: 'Dosa', img: VENDORS.artisan.items[0].img }, { name: 'Tandoor', img: VENDORS.artiste.items[0].img },
+    { name: 'Chaat', img: VENDORS.chaat.items[0].img },
+    { name: 'Biryani', img: VENDORS.camion.items[0].img },
+    { name: 'Dosa', img: VENDORS.artisan.items[0].img },
+    { name: 'Tandoor', img: VENDORS.artiste.items[0].img },
     { name: 'Curries', img: VENDORS.saigon.items[0].img },
   ];
   const install = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; setInstallEvt(null); };
@@ -154,8 +684,25 @@ function Home({ ctx }) {
             <Svg size={14} d={I.chevD} w={2.4} />
           </div>
         </div>
-        <div style={s('width:42px;height:42px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(60,40,20,.12);background:#EEE9E0 center/cover no-repeat;background-image:url(https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120&h=120)')} />
+        <button
+          onClick={handleLogout}
+          title="Log out"
+          style={s('width:42px;height:42px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(60,40,20,.12);background:' + P.soft + ';display:flex;align-items:center;justify-content:center;cursor:pointer')}
+        >
+          <Svg d={I.user} size={18} stroke={P.primary} />
+        </button>
       </div>
+
+      {/* api error banner */}
+      <ErrorBanner message={apiError} onDismiss={() => setApiError(null)} />
+
+      {/* live data badge */}
+      {isLiveMode && (
+        <div style={s('display:flex;align-items:center;gap:6px;padding:0 22px;margin-bottom:4px')}>
+          <span style={s('width:6px;height:6px;border-radius:50%;background:#2F9E6E;animation:rasaPulse 1.4s infinite')} />
+          <span style={s("font:600 10px 'JetBrains Mono',monospace;color:#2F9E6E;letter-spacing:.5px;text-transform:uppercase")}>Live data</span>
+        </div>
+      )}
 
       {/* diet filter */}
       <div style={s('display:flex;justify-content:flex-end;padding:0 22px 12px')}>
@@ -181,7 +728,7 @@ function Home({ ctx }) {
             <div style={s("display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border-radius:999px;padding:5px 11px;font:600 10px 'JetBrains Mono',monospace;letter-spacing:.5px;color:#fff;text-transform:uppercase")}>First order</div>
             <div style={s('font:700 23px ' + DISPLAY + ';color:#fff;line-height:1.15;margin-top:12px;max-width:230px;letter-spacing:-.3px')}>20% off your first order.</div>
             {installEvt ? (
-              <button onClick={install} style={s('margin-top:16px;background:#fff;color:' + P.primary + ';border:none;border-radius:999px;padding:10px 18px;font:700 12.5px \'Inter\';cursor:pointer')}>Install app ⤓</button>
+              <button onClick={install} style={s('margin-top:16px;background:#fff;color:' + P.primary + ';border:none;border-radius:999px;padding:10px 18px;font:700 12.5px \'Inter\';cursor:pointer')}>Install app</button>
             ) : (
               <div style={s('margin-top:16px;display:inline-flex;background:#fff;color:' + P.primary + ';border-radius:999px;padding:10px 18px;font:700 12.5px \'Inter\'')}>Order ahead →</div>
             )}
@@ -205,11 +752,19 @@ function Home({ ctx }) {
           <div style={s('font:700 17px ' + DISPLAY + ';color:' + P.ink + ';letter-spacing:-.3px')}>Join the queue, track your turn</div>
           <span style={s("font:600 12px 'Inter';color:" + P.primary)}>See all</span>
         </div>
+
+        {vendorsLoading && !liveVendors && <Spinner />}
+
         {vendors.map((vd) => (
-          <button key={vd.id} onClick={() => openVendor(vd.id)} style={s('display:block;width:100%;text-align:left;padding:0;border:1px solid ' + P.border + ';background:#fff;border-radius:22px;overflow:hidden;cursor:pointer;margin-bottom:14px')}>
-            <TruckBanner src={vd.banner}>
+          <button
+            key={vd.id}
+            onClick={() => openVendor(vd.id, isLiveMode)}
+            style={s('display:block;width:100%;text-align:left;padding:0;border:1px solid ' + P.border + ';background:#fff;border-radius:22px;overflow:hidden;cursor:pointer;margin-bottom:14px' + (!vd.acceptingOrders && isLiveMode ? ';opacity:.65' : ''))}
+          >
+            <TruckBanner src={vd.banner || PLACEHOLDER_IMG}>
               <div style={s('position:absolute;top:11px;left:11px;display:flex;align-items:center;gap:6px;background:rgba(251,250,247,.94);color:' + P.adeep + ';font:700 11px \'Inter\';padding:6px 10px;border-radius:999px;z-index:2')}>
-                <span style={s('width:7px;height:7px;border-radius:50%;background:' + P.a + ';animation:rasaPulse 1.4s infinite')} />{vd.wait} min queue
+                <span style={s('width:7px;height:7px;border-radius:50%;background:' + (isLiveMode && !vd.acceptingOrders ? '#C0392B' : P.a) + ';animation:rasaPulse 1.4s infinite')} />
+                {isLiveMode ? (vd.acceptingOrders ? `${vd.wait} min wait` : 'Closed') : `${vd.wait} min queue`}
               </div>
             </TruckBanner>
             <div style={s('padding:13px 15px 15px')}>
@@ -231,91 +786,126 @@ function Home({ ctx }) {
 
 /* ============================ VENDOR ============================ */
 function Vendor({ ctx }) {
-  const { v, cart, add, remove, go, tab, setTab, cartCount } = ctx;
+  const { v, cart, add, remove, go, tab, setTab, cartCount, vendorLoading, handleJoinQueue, apiError, setApiError } = ctx;
+
+  // Build category list from current vendor items
   const cats = [];
-  v.items.forEach((i) => { if (!cats.includes(i.cat)) cats.push(i.cat); });
+  if (v && v.items) {
+    v.items.forEach((i) => { if (!cats.includes(i.cat)) cats.push(i.cat); });
+  }
   const tabStyle = (name) => s('flex:1;padding:15px 0;background:none;border:none;cursor:pointer;border-bottom:2.5px solid ' + (tab === name ? P.primary + ';font:700 13px ' + DISPLAY + ';color:' + P.primary : 'transparent;font:600 13px ' + DISPLAY + ';color:#A39BB0'));
 
   return (
     <div style={s('animation:rasaFade .35s ease;display:flex;flex-direction:column;min-height:100%')}>
-      <StickyHeader title={v.name} onBack={() => go('home')} />
-      <TruckBanner src={v.banner} h={180}>
-        <div style={s('position:absolute;inset:0;background:linear-gradient(to top,' + P.paper + ',rgba(250,246,243,0) 60%);pointer-events:none')} />
-      </TruckBanner>
+      <StickyHeader title={v ? v.name : 'Vendor'} onBack={() => go('home')} />
 
-      <div style={s('padding:0 22px;margin-top:-6px;position:relative')}>
-        <div style={s('display:flex;justify-content:space-between;align-items:flex-start;gap:12px')}>
-          <div>
-            <div style={s('font:700 22px ' + DISPLAY + ';color:' + P.ink + ';letter-spacing:-.4px')}>{v.name}</div>
-            <div style={s("font:500 12.5px 'Inter';color:#9A93A6;margin-top:3px")}>{v.cuisine} · {v.price}</div>
-            <div style={s('display:flex;align-items:center;gap:5px;margin-top:6px')}><span style={s("font:600 11px 'Inter';color:#2F9E6E")}>●</span><span style={s("font:600 11.5px 'Inter';color:#6F6A7D")}>{v.open}</span></div>
-          </div>
-          <div style={s('text-align:center;background:' + P.soft + ';border-radius:14px;padding:9px 11px;flex-shrink:0')}>
-            <div style={s('font:700 16px ' + DISPLAY + ';color:' + P.primary)}>{v.rating} ★</div>
-            <div style={s("font:600 8.5px 'JetBrains Mono',monospace;color:#9784BB;letter-spacing:.5px;margin-top:2px")}>{v.ratings} ratings</div>
-          </div>
-        </div>
+      {vendorLoading ? (
+        <Spinner />
+      ) : (
+        <>
+          <TruckBanner src={(v && v.banner) || PLACEHOLDER_IMG} h={180}>
+            <div style={s('position:absolute;inset:0;background:linear-gradient(to top,' + P.paper + ',rgba(250,246,243,0) 60%);pointer-events:none')} />
+          </TruckBanner>
 
-        {/* live queue banner */}
-        <button onClick={() => go('queue')} style={s('width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;background:linear-gradient(135deg,' + P.a + ',' + P.a2 + ');border:none;border-radius:18px;padding:14px 16px;cursor:pointer')}>
-          <div style={s('display:flex;align-items:center;gap:11px')}>
-            <div style={s('width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center')}><Svg d={I.clock} stroke="#fff" /></div>
-            <div style={s('text-align:left')}>
-              <div style={s('font:700 13.5px ' + DISPLAY + ';color:#fff')}>Live queue · {v.wait} min</div>
-              <div style={s("font:500 11px 'Inter';color:rgba(255,255,255,.85)")}>Tap to track in real time</div>
-            </div>
-          </div>
-          <Svg d={I.chevR} w={2.4} stroke="#fff" />
-        </button>
-      </div>
+          <ErrorBanner message={apiError} onDismiss={() => setApiError(null)} />
 
-      {/* tabs */}
-      <div style={s('display:flex;margin-top:18px;border-bottom:1px solid ' + P.border + ';background:' + P.paper + ';position:sticky;top:57px;z-index:30')}>
-        {['Menu', 'Offers', 'Reviews', 'About'].map((t) => <button key={t} onClick={() => setTab(t)} style={tabStyle(t)}>{t}</button>)}
-      </div>
-
-      <div style={s('padding:18px 22px 0;flex:1')}>
-        {tab === 'Menu' && cats.map((cat) => (
-          <div key={cat} style={s('margin-bottom:22px')}>
-            <div style={s('font:700 14px ' + DISPLAY + ';color:' + P.ink + ';border-left:3px solid ' + P.primary + ';padding-left:9px;margin-bottom:13px')}>{cat}</div>
-            {v.items.filter((i) => i.cat === cat).map((i) => <MenuRow key={i.id} item={i} qty={cart[i.id] || 0} add={add} remove={remove} />)}
-          </div>
-        ))}
-        {tab === 'Reviews' && v.reviews.map((r, k) => (
-          <div key={k} style={s('background:#fff;border:1px solid ' + P.border + ';border-radius:18px;padding:15px;margin-bottom:11px')}>
-            <div style={s('display:flex;justify-content:space-between;align-items:center')}>
-              <div style={s('display:flex;align-items:center;gap:10px')}>
-                <div style={s('width:34px;height:34px;border-radius:50%;background:' + P.soft + ';color:' + P.primary + ';display:flex;align-items:center;justify-content:center;font:700 13px ' + DISPLAY)}>{r.author[0]}</div>
-                <div><div style={s('font:700 13px ' + DISPLAY + ';color:' + P.ink)}>{r.author}</div><div style={s("font:500 10.5px 'Inter';color:#B0A9BC")}>{r.date}</div></div>
+          <div style={s('padding:0 22px;margin-top:-6px;position:relative')}>
+            <div style={s('display:flex;justify-content:space-between;align-items:flex-start;gap:12px')}>
+              <div>
+                <div style={s('font:700 22px ' + DISPLAY + ';color:' + P.ink + ';letter-spacing:-.4px')}>{v ? v.name : ''}</div>
+                <div style={s("font:500 12.5px 'Inter';color:#9A93A6;margin-top:3px")}>{v ? (v.cuisine + ' · ' + (v.price || '₹₹')) : ''}</div>
+                <div style={s('display:flex;align-items:center;gap:5px;margin-top:6px')}>
+                  <span style={s('font:600 11px \'Inter\';color:' + (v && v.acceptingOrders !== false ? '#2F9E6E' : '#C0392B'))}>●</span>
+                  <span style={s("font:600 11.5px 'Inter';color:#6F6A7D")}>{v ? v.open : ''}</span>
+                </div>
               </div>
-              <div style={s('background:' + P.soft + ';color:' + P.primary + ';font:700 11px \'Inter\';padding:3px 8px;border-radius:7px')}>★ {r.rating}</div>
+              <div style={s('text-align:center;background:' + P.soft + ';border-radius:14px;padding:9px 11px;flex-shrink:0')}>
+                <div style={s('font:700 16px ' + DISPLAY + ';color:' + P.primary)}>{v ? v.rating : '–'} ★</div>
+                <div style={s("font:600 8.5px 'JetBrains Mono',monospace;color:#9784BB;letter-spacing:.5px;margin-top:2px")}>{v ? (v.ratings || '0') : '0'} ratings</div>
+              </div>
             </div>
-            <div style={s("font:500 12.5px 'Inter';color:#6F6A7D;line-height:1.55;margin-top:11px")}>{r.comment}</div>
+
+            {/* live queue banner */}
+            <button onClick={() => go('queue')} style={s('width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;background:linear-gradient(135deg,' + P.a + ',' + P.a2 + ');border:none;border-radius:18px;padding:14px 16px;cursor:pointer')}>
+              <div style={s('display:flex;align-items:center;gap:11px')}>
+                <div style={s('width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center')}><Svg d={I.clock} stroke="#fff" /></div>
+                <div style={s('text-align:left')}>
+                  <div style={s('font:700 13.5px ' + DISPLAY + ';color:#fff')}>Live queue · {v ? v.wait : '?'} min</div>
+                  <div style={s("font:500 11px 'Inter';color:rgba(255,255,255,.85)")}>Tap to track in real time</div>
+                </div>
+              </div>
+              <Svg d={I.chevR} w={2.4} stroke="#fff" />
+            </button>
           </div>
-        ))}
-        {tab === 'About' && (
-          <div>
-            <div style={s('font:700 14px ' + DISPLAY + ';color:' + P.ink + ';margin-bottom:8px')}>About</div>
-            <div style={s("font:500 12.5px 'Inter';color:#6F6A7D;line-height:1.65;margin-bottom:20px")}>{v.about}</div>
-            <div style={s('background:#fff;border:1px solid ' + P.border + ';border-radius:16px;padding:15px')}>
-              <Row label="Mon – Fri" val={v.hoursWk} /><Row label="Sat – Sun" val={v.hoursWe} top /><Row label="Phone" val={v.phone} top />
-            </div>
+
+          {/* tabs */}
+          <div style={s('display:flex;margin-top:18px;border-bottom:1px solid ' + P.border + ';background:' + P.paper + ';position:sticky;top:57px;z-index:30')}>
+            {['Menu', 'Offers', 'Reviews', 'About'].map((t) => <button key={t} onClick={() => setTab(t)} style={tabStyle(t)}>{t}</button>)}
           </div>
-        )}
-        {tab === 'Offers' && (
-          <div style={s('background:linear-gradient(135deg,' + P.primary + ',' + P.primary2 + ');border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:space-between')}>
-            <div style={s('display:flex;align-items:center;gap:12px')}>
-              <div style={s('width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font:700 16px ' + DISPLAY + ';color:#fff')}>%</div>
-              <div><div style={s('font:700 14px ' + DISPLAY + ';color:#fff')}>Get 20% OFF</div><div style={s("font:500 11px 'Inter';color:rgba(255,255,255,.8)")}>On your first order</div></div>
-            </div>
-            <span style={s("font:700 11px 'Inter';color:#fff;background:rgba(255,255,255,.18);padding:6px 11px;border-radius:8px")}>APPLY</span>
+
+          <div style={s('padding:18px 22px 0;flex:1')}>
+            {tab === 'Menu' && (
+              cats.length === 0 ? (
+                <div style={s("font:500 13px 'Inter';color:#9A93A6;text-align:center;padding:20px 0")}>No menu items available.</div>
+              ) : (
+                cats.map((cat) => (
+                  <div key={cat} style={s('margin-bottom:22px')}>
+                    <div style={s('font:700 14px ' + DISPLAY + ';color:' + P.ink + ';border-left:3px solid ' + P.primary + ';padding-left:9px;margin-bottom:13px')}>{cat}</div>
+                    {v.items.filter((i) => i.cat === cat).map((i) => (
+                      <MenuRow key={i.id} item={i} qty={cart[i.id] || 0} add={add} remove={remove} />
+                    ))}
+                  </div>
+                ))
+              )
+            )}
+            {tab === 'Reviews' && v && v.reviews && v.reviews.length > 0 ? v.reviews.map((r, k) => (
+              <div key={k} style={s('background:#fff;border:1px solid ' + P.border + ';border-radius:18px;padding:15px;margin-bottom:11px')}>
+                <div style={s('display:flex;justify-content:space-between;align-items:center')}>
+                  <div style={s('display:flex;align-items:center;gap:10px')}>
+                    <div style={s('width:34px;height:34px;border-radius:50%;background:' + P.soft + ';color:' + P.primary + ';display:flex;align-items:center;justify-content:center;font:700 13px ' + DISPLAY)}>{r.author[0]}</div>
+                    <div><div style={s('font:700 13px ' + DISPLAY + ';color:' + P.ink)}>{r.author}</div><div style={s("font:500 10.5px 'Inter';color:#B0A9BC")}>{r.date}</div></div>
+                  </div>
+                  <div style={s('background:' + P.soft + ';color:' + P.primary + ';font:700 11px \'Inter\';padding:3px 8px;border-radius:7px')}>★ {r.rating}</div>
+                </div>
+                <div style={s("font:500 12.5px 'Inter';color:#6F6A7D;line-height:1.55;margin-top:11px")}>{r.comment}</div>
+              </div>
+            )) : (
+              tab === 'Reviews' && (
+                <div style={s("font:500 13px 'Inter';color:#9A93A6;text-align:center;padding:20px 0")}>
+                  No reviews yet. Be the first!
+                </div>
+              )
+            )}
+            {tab === 'About' && v && (
+              <div>
+                <div style={s('font:700 14px ' + DISPLAY + ';color:' + P.ink + ';margin-bottom:8px')}>About</div>
+                <div style={s("font:500 12.5px 'Inter';color:#6F6A7D;line-height:1.65;margin-bottom:20px")}>{v.about}</div>
+                <div style={s('background:#fff;border:1px solid ' + P.border + ';border-radius:16px;padding:15px')}>
+                  <Row label="Mon – Fri" val={v.hoursWk || '10:00 – 22:00'} />
+                  <Row label="Sat – Sun" val={v.hoursWe || '10:00 – 23:00'} top />
+                  <Row label="Phone" val={v.phone || 'N/A'} top />
+                </div>
+              </div>
+            )}
+            {tab === 'Offers' && (
+              <div style={s('background:linear-gradient(135deg,' + P.primary + ',' + P.primary2 + ');border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:space-between')}>
+                <div style={s('display:flex;align-items:center;gap:12px')}>
+                  <div style={s('width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font:700 16px ' + DISPLAY + ';color:#fff')}>%</div>
+                  <div><div style={s('font:700 14px ' + DISPLAY + ';color:#fff')}>Get 20% OFF</div><div style={s("font:500 11px 'Inter';color:rgba(255,255,255,.8)")}>On your first order</div></div>
+                </div>
+                <span style={s("font:700 11px 'Inter';color:#fff;background:rgba(255,255,255,.18);padding:6px 11px;border-radius:8px")}>APPLY</span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* sticky footer */}
       <div style={s('position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid ' + P.border + ';padding:13px 18px;z-index:45;margin-top:8px')}>
-        <button onClick={() => go('queue')} style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:14px;padding:15px;font:700 13.5px ' + DISPLAY + ';letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px')}>
+        <button
+          onClick={handleJoinQueue}
+          style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:14px;padding:15px;font:700 13.5px ' + DISPLAY + ';letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px')}
+        >
           {cartCount > 0 ? 'Join queue · ' + cartCount + ' items' : 'Join queue'} <span>→</span>
         </button>
       </div>
@@ -332,17 +922,18 @@ function Row({ label, val, top }) {
 }
 
 function MenuRow({ item, qty, add, remove }) {
+  // Stock badge uses a deterministic per-item number derived from its id
   const csum = item.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const remain = Math.max(0, (3 + (csum % 26)) - qty);
   const showStock = remain <= 20;
   const low = remain <= 5;
   return (
     <div style={s('display:flex;gap:13px;align-items:center;background:#fff;border:1px solid ' + P.border + ';border-radius:18px;padding:11px;margin-bottom:11px')}>
-      <div style={s('width:66px;height:66px;border-radius:13px;flex-shrink:0;background:#EEE9E0 center/cover no-repeat;background-image:url(' + item.img + ')')} />
+      <div style={s('width:66px;height:66px;border-radius:13px;flex-shrink:0;background:#EEE9E0 center/cover no-repeat;background-image:url(' + (item.img || PLACEHOLDER_IMG) + ')')} />
       <div style={s('flex:1;min-width:0')}>
         <div style={s('font:700 13px ' + DISPLAY + ';color:' + P.ink)}>{item.name}</div>
         <div style={s('font:700 12.5px ' + DISPLAY + ';color:' + P.primary + ';margin-top:3px')}>{fmt(item.price)}</div>
-        <div style={s("font:500 11px 'Inter';color:#9A93A6;margin-top:5px;line-height:1.45")}>{item.desc}</div>
+        <div style={s("font:500 11px 'Inter';color:#9A93A6;margin-top:5px;line-height:1.45")}>{item.desc || ''}</div>
         {showStock && (
           <div style={s("display:inline-flex;align-items:center;gap:4px;font:700 8.5px 'JetBrains Mono',monospace;letter-spacing:.3px;text-transform:uppercase;padding:3px 7px;border-radius:6px;margin-top:7px;" + (low ? 'color:#C0392B;background:#FBE7EC' : 'color:' + P.adeep + ';background:' + P.asoft))}>
             <span style={s('width:5px;height:5px;border-radius:50%;background:currentColor;animation:rasaPulse 1.4s infinite')} />{remain === 0 ? 'Sold out' : 'Only ' + remain + ' left'}
@@ -351,12 +942,12 @@ function MenuRow({ item, qty, add, remove }) {
       </div>
       <div style={s('flex-shrink:0;align-self:center')}>
         {qty === 0 ? (
-          <button onClick={() => add(item.id)} style={s('display:inline-flex;align-items:center;gap:5px;background:' + P.soft + ';color:' + P.primary + ';border:1px solid ' + P.pborder + ';border-radius:9px;padding:6px 13px;cursor:pointer;font:700 11px \'Inter\'')}>＋ Add</button>
+          <button onClick={() => add(item.id)} style={s('display:inline-flex;align-items:center;gap:5px;background:' + P.soft + ';color:' + P.primary + ';border:1px solid ' + P.pborder + ';border-radius:9px;padding:6px 13px;cursor:pointer;font:700 11px \'Inter\'')}>+ Add</button>
         ) : (
           <div style={s('display:inline-flex;align-items:center;gap:14px;background:' + P.primary + ';border-radius:9px;padding:6px 12px')}>
-            <button onClick={() => remove(item.id)} style={s('background:none;border:none;color:#fff;cursor:pointer;font-size:15px;line-height:1;display:flex')}>−</button>
+            <button onClick={() => remove(item.id)} style={s('background:none;border:none;color:#fff;cursor:pointer;font-size:15px;line-height:1;display:flex')}>-</button>
             <span style={s("font:700 12px 'Inter';color:#fff")}>{qty}</span>
-            <button onClick={() => add(item.id)} style={s('background:none;border:none;color:#fff;cursor:pointer;font-size:15px;line-height:1;display:flex')}>＋</button>
+            <button onClick={() => add(item.id)} style={s('background:none;border:none;color:#fff;cursor:pointer;font-size:15px;line-height:1;display:flex')}>+</button>
           </div>
         )}
       </div>
@@ -366,74 +957,135 @@ function MenuRow({ item, qty, add, remove }) {
 
 /* ============================ QUEUE ============================ */
 function Queue({ ctx }) {
-  const { v, qSec, go, add } = ctx;
+  const { v, qSec, go, add, activeOrderId, activeOrder, liveAhead, liveNowServingOrderId, queueSnapshot } = ctx;
+
+  // Determine whether we have live data to show
+  const hasLiveOrder = !!activeOrderId && !!activeOrder;
+  const hasLiveQueue = !!queueSnapshot;
+
+  // Timer display — use local countdown when no live data
   const qm = Math.floor(qSec / 60), qs = qSec % 60;
   const qTime = String(qm).padStart(2, '0') + ':' + String(qs).padStart(2, '0');
-  const yourTok = 96, served = Math.floor((765 - qSec) / 8), servingNum = Math.min(yourTok, 84 + served);
-  const ahead = Math.max(0, yourTok - servingNum);
+
+  // Mock queue values (fallback)
+  const yourTok = 96;
+  const served = Math.floor((765 - qSec) / 8);
+  const servingNum = Math.min(yourTok, 84 + served);
+  const mockAhead = Math.max(0, yourTok - servingNum);
+
+  // Live values when available
+  const ahead = hasLiveQueue ? (liveAhead ?? 0) : mockAhead;
+  const displayToken = hasLiveOrder ? (activeOrder.orderNumber || 'A-?') : `A-${yourTok}`;
+  const displayServing = liveNowServingOrderId
+    ? (queueSnapshot?.entries?.find(e => e.orderId === liveNowServingOrderId)?.orderNumber || 'A-?')
+    : `A-${servingNum}`;
+
   const leaveMin = Math.max(0, qm - 5);
+
   return (
     <div style={s('animation:rasaFade .35s ease;display:flex;flex-direction:column;min-height:100%')}>
       <StickyHeader title="Live queue" onBack={() => go('vendor')} />
       <div style={s('padding:18px 22px 0;flex:1')}>
-        <TruckBanner src={v.banner} h={120}>
+        <TruckBanner src={(v && v.banner) || PLACEHOLDER_IMG} h={120}>
           <div style={s('position:absolute;inset:0;border-radius:20px;background:linear-gradient(to top,rgba(22,19,32,.8) 0%,rgba(22,19,32,0) 58%);display:flex;flex-direction:column;justify-content:flex-end;padding:15px')}>
-            <div style={s('font:700 17px ' + DISPLAY + ';color:#fff')}>{v.name}</div>
-            <div style={s("font:500 11.5px 'Inter';color:rgba(255,255,255,.82);margin-top:2px")}>Your order is being prepared</div>
+            <div style={s('font:700 17px ' + DISPLAY + ';color:#fff')}>{v ? v.name : 'Restaurant'}</div>
+            <div style={s("font:500 11.5px 'Inter';color:rgba(255,255,255,.82);margin-top:2px")}>
+              {hasLiveOrder ? `Order #${activeOrder.orderNumber || activeOrderId.slice(0, 8)} · ${activeOrder.status || 'pending'}` : 'Your order is being prepared'}
+            </div>
           </div>
         </TruckBanner>
+
+        {/* live data indicator */}
+        {hasLiveQueue && (
+          <div style={s('display:flex;align-items:center;gap:6px;margin-top:10px')}>
+            <span style={s('width:6px;height:6px;border-radius:50%;background:#5BD6A0;animation:rasaPulse 1.1s infinite')} />
+            <span style={s("font:600 9px 'JetBrains Mono',monospace;color:#5BD6A0;text-transform:uppercase;letter-spacing:.6px")}>Live · polling every 5s</span>
+          </div>
+        )}
 
         {/* now serving */}
         <div style={s('background:#241F33;border-radius:20px;padding:16px 17px 15px;margin-top:14px;overflow:hidden;position:relative')}>
           <div style={s('display:flex;align-items:flex-start;justify-content:space-between')}>
             <div>
-              <div style={s('display:flex;align-items:center;gap:6px')}><span style={s('width:6px;height:6px;border-radius:50%;background:#5BD6A0;animation:rasaPulse 1.1s infinite')} /><span style={s("font:600 8px 'JetBrains Mono',monospace;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.6px")}>Now serving at counter</span></div>
-              <div style={s('font:700 32px ' + DISPLAY + ';color:#fff;margin-top:6px;line-height:1')}>A-{servingNum}</div>
+              <div style={s('display:flex;align-items:center;gap:6px')}>
+                <span style={s('width:6px;height:6px;border-radius:50%;background:#5BD6A0;animation:rasaPulse 1.1s infinite')} />
+                <span style={s("font:600 8px 'JetBrains Mono',monospace;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.6px")}>Now serving at counter</span>
+              </div>
+              <div style={s('font:700 32px ' + DISPLAY + ';color:#fff;margin-top:6px;line-height:1')}>{displayServing}</div>
             </div>
             <div style={s('text-align:right;background:rgba(224,138,60,.16);border:1px solid rgba(224,138,60,.3);border-radius:12px;padding:7px 11px')}>
               <div style={s("font:600 8px 'JetBrains Mono',monospace;color:rgba(255,255,255,.55);text-transform:uppercase")}>Your token</div>
-              <div style={s('font:700 19px ' + DISPLAY + ';color:#E08A3C;margin-top:2px;line-height:1')}>A-{yourTok}</div>
+              <div style={s('font:700 19px ' + DISPLAY + ';color:#E08A3C;margin-top:2px;line-height:1')}>{displayToken}</div>
             </div>
           </div>
           <div style={s('margin-top:13px;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px')}>
             <Svg size={16} stroke="#5BD6A0" d={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></>} />
-            <span style={s("font:600 12px 'Inter';color:rgba(255,255,255,.9)")}>{ahead === 0 ? "You're up next" : ahead + ' ahead of you'}</span>
-            <span style={s('margin-left:auto;display:flex;align-items:center;gap:5px')}><span style={s('width:5px;height:5px;border-radius:50%;background:#5BD6A0;animation:rasaPulse 1.1s infinite')} /><span style={s("font:700 8.5px 'JetBrains Mono',monospace;color:#5BD6A0;text-transform:uppercase;letter-spacing:.6px")}>Live</span></span>
+            <span style={s("font:600 12px 'Inter';color:rgba(255,255,255,.9)")}>{ahead === 0 ? "You're up next" : `${ahead} ahead of you`}</span>
+            <span style={s('margin-left:auto;display:flex;align-items:center;gap:5px')}>
+              <span style={s('width:5px;height:5px;border-radius:50%;background:#5BD6A0;animation:rasaPulse 1.1s infinite')} />
+              <span style={s("font:700 8.5px 'JetBrains Mono',monospace;color:#5BD6A0;text-transform:uppercase;letter-spacing:.6px")}>Live</span>
+            </span>
           </div>
         </div>
 
         {/* timers */}
         <div style={s('display:grid;grid-template-columns:1.15fr .85fr;gap:11px;margin-top:14px')}>
           <div style={s('background:#fff;border:1px solid ' + P.border + ';border-radius:20px;padding:16px')}>
-            <div style={s('display:flex;align-items:center;justify-content:space-between')}><span style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px")}>Estimated wait</span><div style={s('width:30px;height:30px;border-radius:50%;background:' + P.soft + ';display:flex;align-items:center;justify-content:center')}><Svg size={16} stroke={P.primary} style={{ animation: 'rasaSpin 8s linear infinite' }} d={<><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2" /></>} /></div></div>
+            <div style={s('display:flex;align-items:center;justify-content:space-between')}>
+              <span style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px")}>Estimated wait</span>
+              <div style={s('width:30px;height:30px;border-radius:50%;background:' + P.soft + ';display:flex;align-items:center;justify-content:center')}>
+                <Svg size={16} stroke={P.primary} style={{ animation: 'rasaSpin 8s linear infinite' }} d={<><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2" /></>} />
+              </div>
+            </div>
             <div style={s('font:700 38px ' + DISPLAY + ';color:' + P.ink + ';margin-top:18px;line-height:1;letter-spacing:1px')}>{qTime}</div>
             <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:6px")}>minutes remaining</div>
           </div>
           <div style={s('background:#fff;border:1px solid ' + P.border + ';border-radius:20px;padding:16px;display:flex;flex-direction:column')}>
-            <div style={s('display:flex;align-items:center;justify-content:space-between')}><span style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase")}>Leave in</span><div style={s('width:30px;height:30px;border-radius:50%;background:' + P.soft + ';display:flex;align-items:center;justify-content:center')}><Svg size={16} stroke={P.primary} d={<><circle cx="5.5" cy="17.5" r="3.5" /><circle cx="18.5" cy="17.5" r="3.5" /><path d="M15 17.5h-3.8l-2-7H5.5M9 6h4l2 5" /></>} /></div></div>
-            <div style={s('margin-top:18px')}><div style={s('font:700 24px ' + DISPLAY + ';color:' + P.ink + ';line-height:1')}>{leaveMin <= 0 ? 'Now' : leaveMin + ' min'}</div><div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:5px")}>buffer to spare</div></div>
+            <div style={s('display:flex;align-items:center;justify-content:space-between')}>
+              <span style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase")}>Leave in</span>
+              <div style={s('width:30px;height:30px;border-radius:50%;background:' + P.soft + ';display:flex;align-items:center;justify-content:center')}>
+                <Svg size={16} stroke={P.primary} d={<><circle cx="5.5" cy="17.5" r="3.5" /><circle cx="18.5" cy="17.5" r="3.5" /><path d="M15 17.5h-3.8l-2-7H5.5M9 6h4l2 5" /></>} />
+              </div>
+            </div>
+            <div style={s('margin-top:18px')}>
+              <div style={s('font:700 24px ' + DISPLAY + ';color:' + P.ink + ';line-height:1')}>{leaveMin <= 0 ? 'Now' : leaveMin + ' min'}</div>
+              <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:5px")}>buffer to spare</div>
+            </div>
           </div>
         </div>
 
         {/* add more */}
-        <div style={s('font:700 14px ' + DISPLAY + ';color:' + P.ink + ';margin:22px 0 12px')}>Add more from {v.name}</div>
-        <div className="scr" style={s('display:flex;gap:12px;overflow-x:auto;margin:0 -22px;padding:0 22px 4px')}>
-          {v.items.map((i) => (
-            <div key={i.id} style={s('width:148px;flex-shrink:0;background:#fff;border:1px solid ' + P.border + ';border-radius:16px;overflow:hidden')}>
-              <div style={s('height:96px;background:#EEE9E0 center/cover no-repeat;background-image:url(' + i.img + ')')} />
-              <div style={s('padding:10px 11px 11px')}>
-                <div style={s('font:700 12px ' + DISPLAY + ';color:' + P.ink + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{i.name}</div>
-                <div style={s('display:flex;align-items:center;justify-content:space-between;margin-top:8px')}><span style={s('font:700 12px ' + DISPLAY + ';color:' + P.ink)}>{fmt(i.price)}</span><button onClick={() => add(i.id)} style={s('background:' + P.soft + ';color:' + P.primary + ';border:1px solid ' + P.pborder + ';border-radius:8px;padding:4px 11px;cursor:pointer;font:700 11px \'Inter\'')}>＋ Add</button></div>
-              </div>
+        {v && v.items && v.items.length > 0 && (
+          <>
+            <div style={s('font:700 14px ' + DISPLAY + ';color:' + P.ink + ';margin:22px 0 12px')}>Add more from {v.name}</div>
+            <div className="scr" style={s('display:flex;gap:12px;overflow-x:auto;margin:0 -22px;padding:0 22px 4px')}>
+              {v.items.map((i) => (
+                <div key={i.id} style={s('width:148px;flex-shrink:0;background:#fff;border:1px solid ' + P.border + ';border-radius:16px;overflow:hidden')}>
+                  <div style={s('height:96px;background:#EEE9E0 center/cover no-repeat;background-image:url(' + (i.img || PLACEHOLDER_IMG) + ')')} />
+                  <div style={s('padding:10px 11px 11px')}>
+                    <div style={s('font:700 12px ' + DISPLAY + ';color:' + P.ink + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{i.name}</div>
+                    <div style={s('display:flex;align-items:center;justify-content:space-between;margin-top:8px')}>
+                      <span style={s('font:700 12px ' + DISPLAY + ';color:' + P.ink)}>{fmt(i.price)}</span>
+                      <button onClick={() => add(i.id)} style={s('background:' + P.soft + ';color:' + P.primary + ';border:1px solid ' + P.pborder + ';border-radius:8px;padding:4px 11px;cursor:pointer;font:700 11px \'Inter\'')}>+ Add</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
 
       <div style={s('position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid ' + P.border + ';padding:13px 18px;z-index:45;margin-top:14px')}>
         <button onClick={() => go('pay')} style={s('width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:' + P.primary + ';color:#fff;border:none;border-radius:16px;padding:15px 18px;cursor:pointer;box-shadow:0 6px 18px -6px rgba(125,21,53,.55)')}>
-          <span style={s('display:flex;align-items:center;gap:9px')}><Svg d={I.card} stroke="#fff" /><span style={s('display:flex;flex-direction:column;align-items:flex-start;line-height:1.15')}><span style={s('font:700 14px ' + DISPLAY)}>Pay bill</span><span style={s("font:600 10px 'Inter';color:rgba(255,255,255,.78)")}>Settle at the counter</span></span></span>
-          <span style={s('display:flex;align-items:center;gap:8px;font:700 15px ' + DISPLAY)}>{fmt(ctx.money.total)} <span>→</span></span>
+          <span style={s('display:flex;align-items:center;gap:9px')}>
+            <Svg d={I.card} stroke="#fff" />
+            <span style={s('display:flex;flex-direction:column;align-items:flex-start;line-height:1.15')}>
+              <span style={s('font:700 14px ' + DISPLAY)}>Pay bill</span>
+              <span style={s("font:600 10px 'Inter';color:rgba(255,255,255,.78)")}>Settle at the counter</span>
+            </span>
+          </span>
+          <span style={s('display:flex;align-items:center;gap:8px;font:700 15px ' + DISPLAY)}>{fmt(ctx.money.total)} →</span>
         </button>
       </div>
     </div>
@@ -442,7 +1094,18 @@ function Queue({ ctx }) {
 
 /* ============================ PAYMENT ============================ */
 function Payment({ ctx }) {
-  const { go, payMethod, setPayMethod, money } = ctx;
+  const { go, payMethod, setPayMethod, money, activeOrderId } = ctx;
+  /*
+   * NOTE on real in-app payments:
+   * The backend supports `paymentIntent:'pay_in_app'` with Razorpay. To wire it:
+   *   1. Call POST /payments/orders (backend creates a Razorpay order).
+   *   2. Load the Razorpay Checkout script and open the modal.
+   *   3. On success the Razorpay webhook (POST /payments/webhook) verifies the
+   *      HMAC signature and transitions the order to `paid`.
+   * This is intentionally out of scope here — no backend changes needed; the
+   * endpoints already exist. The current flow uses `pay_at_truck` (settle at
+   * the counter) so there is no client-side card charge.
+   */
   const Radio = ({ on }) => <div style={s('width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;' + (on ? 'background:' + P.primary : 'border:2px solid #DDD0D4;background:#fff'))}>{on && <span style={s('color:#fff;font-size:13px;font-weight:700')}>✓</span>}</div>;
   const card = (id) => s('width:100%;display:flex;align-items:center;gap:13px;background:#fff;border-radius:16px;padding:15px;cursor:pointer;margin-bottom:11px;' + (payMethod === id ? 'border:1.5px solid ' + P.primary + ';box-shadow:0 0 0 3px rgba(125,21,53,.12)' : 'border:1.5px solid ' + P.border));
   const methods = [
@@ -456,6 +1119,14 @@ function Payment({ ctx }) {
     <div style={s('animation:rasaFade .35s ease;display:flex;flex-direction:column;min-height:100%')}>
       <StickyHeader title="Payment Methods" onBack={() => go('queue')} />
       <div style={s('padding:16px 18px 0;flex:1')}>
+        {/* pay_at_truck notice */}
+        <div style={s('background:' + P.asoft + ';border:1px solid ' + P.adeep + '30;border-radius:14px;padding:12px 14px;margin-bottom:16px')}>
+          <div style={s('font:700 12.5px ' + DISPLAY + ';color:' + P.adeep)}>Pay at the counter</div>
+          <div style={s("font:500 11px 'Inter';color:" + P.adeep + ";margin-top:3px;line-height:1.5")}>
+            {activeOrderId ? `Order confirmed (#${activeOrderId.slice(0, 8)}…). Show this screen at the counter.` : 'Your order is queued. Settle with the vendor directly.'}
+          </div>
+        </div>
+
         <div style={s('display:flex;align-items:center;gap:14px;background:' + P.soft + ';border:1px solid ' + P.pborder + ';border-radius:18px;padding:16px;margin-bottom:24px')}>
           <div style={s('width:46px;height:46px;border-radius:13px;background:' + P.primary + ';display:flex;align-items:center;justify-content:center')}><Svg size={22} d={I.card} stroke="#fff" w={2} /></div>
           <div style={s('flex:1')}><div style={s('font:700 14px ' + DISPLAY + ';color:' + P.ink)}>Total Balance</div><div style={s("font:500 11px 'Inter';color:#9A8A8E;margin-top:2px")}>Available for checkout</div></div>
@@ -476,7 +1147,7 @@ function Payment({ ctx }) {
         })}
       </div>
       <div style={s('position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid ' + P.border + ';padding:13px 18px;z-index:45')}>
-        <button onClick={() => go('success')} style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:16px;padding:16px;font:700 14px ' + DISPLAY + ';letter-spacing:.3px;cursor:pointer')}>Pay {fmt(money.total)}</button>
+        <button onClick={() => go('success')} style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:16px;padding:16px;font:700 14px ' + DISPLAY + ';letter-spacing:.3px;cursor:pointer')}>Confirm order · {fmt(money.total)}</button>
         <div style={s('text-align:center;margin-top:10px')}><span onClick={() => go('failed')} style={s("font:600 11.5px 'Inter';color:#B0A9BC;cursor:pointer;text-decoration:underline;text-underline-offset:2px")}>Simulate a declined payment</span></div>
       </div>
     </div>
@@ -485,15 +1156,19 @@ function Payment({ ctx }) {
 
 /* ============================ SUCCESS / FAILED ============================ */
 function Success({ ctx }) {
-  const { v, go, money } = ctx;
+  const { v, go, money, activeOrder } = ctx;
+  const orderNum = activeOrder?.orderNumber;
   return (
     <div style={s('animation:rasaFade .35s ease;padding:0 22px 32px')}>
       <div style={s('display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:40px')}>
         <div style={s('width:84px;height:84px;border-radius:50%;background:#E4F4EC;display:flex;align-items:center;justify-content:center')}><div style={s('width:58px;height:58px;border-radius:50%;background:#2F9E6E;display:flex;align-items:center;justify-content:center')}><Svg size={30} d={I.check} stroke="#fff" w={3} /></div></div>
-        <div style={s('font:700 23px ' + DISPLAY + ';color:' + P.ink + ';margin-top:20px;letter-spacing:-.3px')}>Payment successful</div>
-        <div style={s("font:500 12.5px 'Inter';color:#9A93A6;margin-top:7px;line-height:1.55;max-width:260px")}>Your order of <b style={s('color:' + P.ink)}>{fmt(money.total)}</b> is confirmed. {v.name} has been notified.</div>
+        <div style={s('font:700 23px ' + DISPLAY + ';color:' + P.ink + ';margin-top:20px;letter-spacing:-.3px')}>Order confirmed</div>
+        <div style={s("font:500 12.5px 'Inter';color:#9A93A6;margin-top:7px;line-height:1.55;max-width:260px")}>
+          {orderNum ? <><b style={s('color:' + P.ink)}>#{orderNum}</b> · </> : ''}
+          Your order of <b style={s('color:' + P.ink)}>{fmt(money.total)}</b> is confirmed. {v ? v.name : 'The vendor'} has been notified.
+        </div>
       </div>
-      <button onClick={() => go('queue')} style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:16px;padding:16px;font:700 13.5px ' + DISPLAY + ';cursor:pointer;margin-top:26px;display:flex;align-items:center;justify-content:center;gap:8px')}>Track queue status <span>→</span></button>
+      <button onClick={() => go('queue')} style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:16px;padding:16px;font:700 13.5px ' + DISPLAY + ';cursor:pointer;margin-top:26px;display:flex;align-items:center;justify-content:center;gap:8px')}>Track queue status →</button>
       <div style={s('text-align:center;margin-top:14px')}><span onClick={() => go('home')} style={s("font:600 12px 'Inter';color:#9A93A6;cursor:pointer")}>Back to home</span></div>
     </div>
   );
