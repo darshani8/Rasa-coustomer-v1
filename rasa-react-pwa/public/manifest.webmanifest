@@ -1,7 +1,7 @@
 {
-  "name": "Rasa — Skip the queue",
+  "name": "Rasa — Digital queue management",
   "short_name": "Rasa",
-  "description": "Order ahead and skip the queue at your favourite food trucks.",
+  "description": "Join the queue from your phone and track your turn in real time at your favourite food trucks.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

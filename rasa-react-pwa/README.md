@@ -1,6 +1,6 @@
 # Rasa — React PWA
 
-Skip-the-queue food-truck ordering app, built as an installable React Progressive Web App (Vite + React 18).
+Digital queue management app for food trucks, built as an installable React Progressive Web App (Vite + React 18). Customers join the queue from their phone, get a live token, and track their turn in real time.
 
 ## Run it
 

@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Rasa — skip-the-queue food-truck ordering app (React PWA)",
+  "description": "Rasa — digital queue management for food trucks (React PWA)",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

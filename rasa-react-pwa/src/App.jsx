@@ -202,7 +202,7 @@ function Home({ ctx }) {
       {/* vendor cards */}
       <div style={s('padding:24px 22px 0')}>
         <div style={s('display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px')}>
-          <div style={s('font:700 17px ' + DISPLAY + ';color:' + P.ink + ';letter-spacing:-.3px')}>Order ahead, skip the wait</div>
+          <div style={s('font:700 17px ' + DISPLAY + ';color:' + P.ink + ';letter-spacing:-.3px')}>Join the queue, track your turn</div>
           <span style={s("font:600 12px 'Inter';color:" + P.primary)}>See all</span>
         </div>
         {vendors.map((vd) => (
