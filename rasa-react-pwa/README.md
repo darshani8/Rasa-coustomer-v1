@@ -43,6 +43,19 @@ rasa-react-pwa/
    └─ App.jsx              # state + phone shell + all screens
 ```
 
+## Backend wiring
+
+The app integrates with the RASAP2 REST backend at `/api/v1`. Copy `.env.example` to
+`.env.local` and set `VITE_API_BASE` to your backend URL. The backend must include the
+Vite dev server origin (e.g. `http://localhost:5173`) in `CORS_ALLOWED_ORIGINS` or the
+browser will block every fetch.
+
+When authenticated, all screens fetch live data. Without a token (or when the API is
+unreachable) the app falls back gracefully to the mock `VENDORS` data so the visual
+demo still renders.
+
+See `INTEGRATION.md` for the full endpoint map, auth flow, and known gaps.
+
 ## Notes / next steps
 
 - **Styling** uses the `s()` helper so the exact inline styles from the original design carry over 1:1. In a larger codebase you'd likely move these to CSS modules / Tailwind / styled-components.
