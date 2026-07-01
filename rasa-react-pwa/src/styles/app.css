@@ -1,0 +1,73 @@
+/* Base + keyframes ported from the reference prototype's app stylesheet. */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #E7DFD2;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.scr::-webkit-scrollbar { width: 0; height: 0; }
+.scr { scrollbar-width: none; }
+
+@keyframes rasaFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes rasaSpin { to { transform: rotate(360deg); } }
+@keyframes rasaPulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@keyframes rasaZoom { from { transform: scale(1.04); } to { transform: scale(1.16); } }
+@keyframes rasaShine { 0% { transform: translateX(-160%) skewX(-18deg); } 60%, 100% { transform: translateX(320%) skewX(-18deg); } }
+@keyframes rasaSteam { 0% { opacity: 0; transform: translateY(6px) scaleX(.7); } 25% { opacity: .5; } 100% { opacity: 0; transform: translateY(-26px) scaleX(1.3); } }
+@keyframes rasaTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.rasa-root { min-height: 100vh; }
+
+/* ---- Theme switcher (app chrome, not part of the phone UI) ---- */
+.rasa-theme { position: fixed; top: 16px; right: 16px; z-index: 2000; }
+.rasa-theme-fab {
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid #E4DDD0;
+  background: #fff; color: var(--p, #7D1535); cursor: pointer; display: flex;
+  align-items: center; justify-content: center; box-shadow: 0 4px 14px -6px rgba(40, 25, 60, .35);
+}
+.rasa-theme-panel {
+  position: absolute; top: 52px; right: 0; width: 232px; background: #fff;
+  border: 1px solid #ECE6DB; border-radius: 16px; padding: 14px;
+  box-shadow: 0 24px 60px -20px rgba(40, 25, 60, .4);
+}
+.rasa-theme-title { font: 700 13px 'Space Grotesk', sans-serif; color: #3B2630; margin-bottom: 10px; }
+.rasa-theme-group { margin-bottom: 12px; }
+.rasa-theme-label {
+  font: 600 10px 'JetBrains Mono', monospace; letter-spacing: 1px; text-transform: uppercase;
+  color: #A39BB0; margin-bottom: 6px;
+}
+.rasa-theme-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.rasa-theme-chip {
+  padding: 6px 10px; border-radius: 999px; border: 1px solid #ECE6DB; background: #fff;
+  color: #6F6A7D; font: 600 11px 'Inter', sans-serif; cursor: pointer;
+}
+.rasa-theme-chip.is-active {
+  background: var(--p, #7D1535); color: #fff; border-color: var(--p, #7D1535);
+}
+
+/* ---- Responsive: full-screen app on phones, showcase on desktop ---- */
+@media (max-width: 860px) {
+  .rasa-root > .rasa-stage {
+    padding: 0 !important;
+    gap: 0 !important;
+    display: block !important;
+    min-height: 100vh !important;
+  }
+  .rasa-root .rasa-rail { display: none !important; }
+  .rasa-root .rasa-main { width: 100% !important; }
+  /* the pill label above the phone */
+  .rasa-root .rasa-main > div:first-child { display: none !important; }
+  /* the phone device shell -> fill the viewport */
+  .rasa-root .rasa-main > div:nth-child(2) {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+  .rasa-root .rasa-main > div:nth-child(2) > div {
+    border-radius: 0 !important;
+  }
+}
