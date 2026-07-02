@@ -1,7 +1,6 @@
 import { useStore } from '@/state/store';
 import { getVendor, billMethodName } from '@/data';
 import { billDiscount, billPayable, inr } from '@/lib/money';
-import { openRazorpay } from '@/lib/razorpay';
 import { s } from '@/lib/style';
 import { StickyHeader, Icon } from '@/components';
 
@@ -125,17 +124,7 @@ export default function BillSummary() {
           <div style={s("font:700 14px var(--display,'Space Grotesk');color:#2A1B22;margin-top:2px")}>{inr(payable)}</div>
         </div>
         <button
-          onClick={async () => {
-            if (billPay === 'razorpay') {
-              await openRazorpay({
-                amount: payable,
-                description: `Rasa bill payment — ${vendor.name}`,
-                onSuccess: () => confirmBillPay(),
-              });
-              return;
-            }
-            confirmBillPay();
-          }}
+          onClick={() => confirmBillPay()}
           style={s('flex-shrink:0;background:var(--p,#7D1535);color:#fff;border:none;border-radius:13px;padding:14px 24px;font:700 13px var(--display,"Space Grotesk");cursor:pointer;display:flex;align-items:center;gap:7px')}
         >
           Pay now <span>→</span>
