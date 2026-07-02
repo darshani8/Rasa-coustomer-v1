@@ -1,0 +1,54 @@
+<sc-if value="{{ isStreet }}" hint-placeholder-val="{{ false }}">
+          <div class="pg-wide" style="animation:rasaFade .35s ease;padding-bottom:28px" data-screen-label="Food street">
+            <div style="position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:rgba(250,246,243,.92);backdrop-filter:blur(10px);border-bottom:1px solid #EFE9DF">
+              <button onclick="{{ goHome }}" aria-label="Back" style="width:36px;height:36px;border-radius:12px;background:#fff;border:1px solid #ECE6DB;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B2630" stroke-width="2.4"><path d="m15 18-6-6 6-6"></path></svg></button>
+              <div style="min-width:0"><div style="font:700 18px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ streetName }}</div><div style="font:500 11px 'Inter';color:#9A93A6;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ streetSubtitle }}</div></div>
+            </div>
+
+            <!-- filter chips -->
+            <div class="scr" ref="{{ dragScroll }}" style="display:flex;align-items:center;gap:9px;overflow-x:auto;padding:13px 18px 4px;cursor:grab">
+              <sc-for list="{{ streetChips }}" as="chip">
+                <button onclick="{{ chip.onClick }}" style="{{ chip.style }}">{{ chip.label }}</button>
+              </sc-for>
+            </div>
+
+            <div class="vgrid" style="padding:12px 18px 0">
+              <sc-if value="{{ streetEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="text-align:center;padding:46px 24px">
+                  <div style="width:64px;height:64px;border-radius:50%;background:#F4EEE7;display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"></path></svg></div>
+                  <div style="font:700 15px var(--display,'Space Grotesk');color:#3B2630">No trucks here right now</div>
+                  <div style="font:500 12px 'Inter';color:#9A93A6;margin-top:6px;max-width:250px;margin-left:auto;margin-right:auto">No open vendors on this street yet. We'll ping you the moment one rolls in.</div>
+                  <button style="margin-top:18px;background:none;color:var(--p,#8A1538);border:1.5px solid var(--p,#8A1538);border-radius:12px;padding:11px 22px;font:700 12.5px var(--display,'Space Grotesk');cursor:pointer">Notify me</button>
+                </div>
+              </sc-if>
+              <sc-for list="{{ streetVendors }}" as="vd" hint-placeholder-count="2">
+                <button onclick="{{ vd.onClick }}" style="display:block;width:100%;text-align:left;padding:0;border:1px solid #ECE6DB;background:#fff;border-radius:var(--radXL,20px);overflow:hidden;cursor:pointer;margin-bottom:14px">
+                  <div style="position:relative;height:130px;overflow:hidden;background:#EEE9E0">
+                    <div style="position:absolute;inset:0;background:#EEE9E0 center/cover no-repeat;background-image:url({{ vd.photo }});animation:rasaZoom 13s ease-in-out infinite alternate"></div>
+                    <div style="position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.34),transparent);animation:rasaShine 6.5s ease-in-out infinite;pointer-events:none;z-index:1"></div>
+                    <div style="position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:6px;background:rgba(251,250,247,.94);backdrop-filter:blur(4px);color:var(--adeep,#6E7A38);font:700 11px 'Inter';padding:6px 10px;border-radius:999px;z-index:2">
+                      <span style="width:7px;height:7px;border-radius:50%;background:var(--a,#9BAA5C);animation:rasaPulse 1.4s infinite"></span>{{ vd.waitLabel }}
+                    </div>
+                    <div style="position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:5px;background:rgba(22,19,32,.62);backdrop-filter:blur(4px);color:#fff;font:700 9px 'JetBrains Mono',monospace;letter-spacing:.5px;padding:5px 8px;border-radius:999px;z-index:2">
+                      <span style="width:6px;height:6px;border-radius:50%;background:var(--alite,#C2D89B);animation:rasaPulse 1.2s infinite"></span>{{ vd.liveLabel }}
+                    </div>
+                  </div>
+                  <div style="padding:13px 15px 15px">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+                      <div style="font:700 16px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.2px">{{ vd.name }}</div>
+                      <div style="display:flex;align-items:center;gap:3px;background:var(--psoft,#F7E9EC);color:var(--p,#7D1535);font:700 12px 'Inter';padding:4px 8px;border-radius:9px;white-space:nowrap">★ {{ vd.ratingLabel }}</div>
+                    </div>
+                    <div style="font:500 12.5px 'Inter';color:#9A93A6;margin-top:4px">{{ vd.cuisine }}</div>
+                    <div style="display:flex;align-items:center;gap:5px;margin-top:9px">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>
+                      <span style="font:500 12px 'Inter';color:#B0A9BC">{{ vd.area }}</span>
+                    </div>
+                  </div>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ===================== SEARCH ===================== -->
+          

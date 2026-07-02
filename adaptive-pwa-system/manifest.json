@@ -1,0 +1,16 @@
+{
+  "name": "Adaptive PWA System",
+  "short_name": "Adaptive",
+  "start_url": "/adaptive-pwa-system/",
+  "display": "standalone",
+  "background_color": "#f8f7fb",
+  "theme_color": "#7c3aed",
+  "orientation": "any",
+  "scope": "/adaptive-pwa-system/",
+  "description": "A fully adaptive PWA UI system that optimizes for every device class.",
+  "icons": [
+    { "src": "icons/icon-192.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icons/icon-512.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icons/icon-512-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

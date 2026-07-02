@@ -1,0 +1,162 @@
+<sc-if value="{{ isQueue }}" hint-placeholder-val="{{ false }}">
+          <div style="animation:rasaFade .35s ease;display:flex;flex-direction:column;min-height:100%">
+            <div style="position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:12px 18px;background:rgba(251,250,247,.9);backdrop-filter:blur(10px);border-bottom:1px solid #EFE9DF">
+              <button onclick="{{ goVendor }}" style="width:36px;height:36px;border-radius:12px;background:#fff;border:1px solid #ECE6DB;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B2630" stroke-width="2.4"><path d="m15 18-6-6 6-6"></path></svg></button>
+              <span style="font:700 16px var(--display,'Space Grotesk');color:#3B2630">Live queue</span>
+            </div>
+
+            <div style="padding:18px 22px 0;flex:1">
+              <div style="position:relative;border-radius:var(--radXL,20px);overflow:hidden;height:120px;background:#EEE9E0">
+                <div style="position:absolute;inset:0;background:#EEE9E0 center/cover no-repeat;background-image:url({{ vPhoto }});animation:rasaZoom 16s ease-in-out infinite alternate"></div>
+                <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(22,19,32,.8) 0%,rgba(22,19,32,0) 62%);display:flex;flex-direction:column;justify-content:flex-end;padding:15px">
+                  <div style="font:700 17px var(--display,'Space Grotesk');color:#fff">{{ vName }}</div>
+                  <div style="font:500 11.5px 'Inter';color:rgba(255,255,255,.82);margin-top:2px">Your order is being prepared</div>
+                </div>
+              </div>
+
+              <!-- live counter at counter -->
+              <div style="background:var(--pdeep,#5E1029);border-radius:var(--radXL,20px);padding:16px 17px 15px;margin-top:14px;overflow:hidden;position:relative">
+                <div style="position:absolute;top:0;bottom:0;left:0;width:34%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.07),transparent);animation:rasaShine 5s ease-in-out infinite;pointer-events:none"></div>
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;position:relative">
+                  <div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:var(--alite,#C2D89B);animation:rasaPulse 1.1s infinite"></span><span style="font:600 8px 'JetBrains Mono',monospace;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.6px">Now serving at counter</span></div>
+                    <div style="font:700 32px var(--display,'Space Grotesk');color:#fff;margin-top:6px;line-height:1;letter-spacing:.5px">{{ servingLabel }}</div>
+                  </div>
+                  <div style="text-align:right;background:rgba(155,170,92,.18);border:1px solid rgba(155,170,92,.4);border-radius:12px;padding:7px 11px">
+                    <div style="font:600 8px 'JetBrains Mono',monospace;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.6px">Your token</div>
+                    <div style="font:700 19px var(--display,'Space Grotesk');color:var(--a,#9BAA5C);margin-top:2px;line-height:1">{{ yourTokenLabel }}</div>
+                  </div>
+                </div>
+                <div style="margin-top:13px;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px;position:relative">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--alite,#C2D89B)" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg>
+                  <span style="font:600 12px 'Inter';color:rgba(255,255,255,.9)">{{ aheadLabel }}</span>
+                  <span style="margin-left:auto;display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:var(--alite,#C2D89B);animation:rasaPulse 1.1s infinite"></span><span style="font:700 8.5px 'JetBrains Mono',monospace;color:var(--alite,#C2D89B);text-transform:uppercase;letter-spacing:.6px">Live</span></span>
+                </div>
+              </div>
+
+              <!-- timer cards -->
+              <div style="display:grid;grid-template-columns:1.15fr .85fr;gap:11px;margin-top:14px">
+                <div style="background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:16px;overflow:hidden">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div style="font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px">Estimated wait</div>
+                    <div style="width:30px;height:30px;border-radius:50%;background:var(--psoft,#F7E9EC);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.2" style="animation:rasaSpin 8s linear infinite"><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2"></path></svg></div>
+                  </div>
+                  <div style="font:700 38px var(--display,'Space Grotesk');color:#3B2630;margin-top:18px;line-height:1;letter-spacing:1px">{{ qTime }}</div>
+                  <div style="font:500 10px 'Inter';color:#9A93A6;margin-top:6px">minutes remaining</div>
+                </div>
+                <div style="background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:16px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between">
+                  <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+                    <div style="font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px">Leave in</div>
+                    <div style="width:30px;height:30px;border-radius:50%;background:var(--psoft,#F7E9EC);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.2"><circle cx="5.5" cy="17.5" r="3.5"></circle><circle cx="18.5" cy="17.5" r="3.5"></circle><path d="M15 17.5h-3.8l-2-7H5.5M9 6h4l2 5"></path></svg></div>
+                  </div>
+                  <div style="margin-top:auto">
+                    <div style="font:700 24px var(--display,'Space Grotesk');color:#3B2630;line-height:1;margin-top:18px">{{ leaveBigLabel }}</div>
+                    <div style="font:500 10px 'Inter';color:#9A93A6;margin-top:5px">{{ leaveSub }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- stepper -->
+              <div style="background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:20px 18px;margin-top:14px;position:relative">
+                <div style="position:absolute;left:36px;top:30px;bottom:30px;width:2px;background:#EFE9DF"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:22px">
+                  <div style="display:flex;align-items:center;gap:13px"><div style="width:36px;height:36px;border-radius:11px;background:var(--psoft,#F7E9EC);display:flex;align-items:center;justify-content:center;z-index:1"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></div><span style="font:700 12.5px var(--display,'Space Grotesk');color:#3B2630" data-comment-anchor="4570781f80-span">In the queue</span></div>
+                  <div style="width:18px;height:18px;border-radius:50%;background:var(--p,#7D1535);display:flex;align-items:center;justify-content:center"><div style="width:6px;height:6px;border-radius:50%;background:#fff"></div></div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:22px">
+                  <div style="display:flex;align-items:center;gap:13px"><div style="width:36px;height:36px;border-radius:11px;background:#F4EEE7;display:flex;align-items:center;justify-content:center;z-index:1"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="3"></rect><path d="M2 10h20"></path></svg></div><span style="font:600 12.5px 'Inter';color:#B0A9BC" data-comment-anchor="adabbc96f6-span">Payment Zone</span></div>
+                  <div style="width:16px;height:16px;border-radius:50%;border:2px solid #E2DCEA;background:#fff;z-index:1"></div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;position:relative">
+                  <div style="display:flex;align-items:center;gap:13px"><div style="width:36px;height:36px;border-radius:11px;background:#F4EEE7;display:flex;align-items:center;justify-content:center;z-index:1"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18M16 10a4 4 0 0 1-8 0"></path></svg></div><span style="font:600 12.5px 'Inter';color:#B0A9BC" data-comment-anchor="db0f26a69c-span">Rasa Zone</span></div>
+                  <div style="width:16px;height:16px;border-radius:50%;border:2px solid #E2DCEA;background:#fff;z-index:1"></div>
+                </div>
+              </div>
+
+              <!-- add more from this truck (horizontal) -->
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:22px;margin-bottom:12px">
+                <div style="font:700 14px var(--display,'Space Grotesk');color:#3B2630">Add more from {{ vName }}</div>
+                <span onclick="{{ goVendor }}" style="font:600 11.5px 'Inter';color:var(--p,#7D1535);cursor:pointer">Full menu</span>
+              </div>
+              <div class="scr" ref="{{ dragScroll }}" style="display:flex;gap:12px;overflow-x:auto;margin:0 -22px;padding:0 22px 4px;cursor:grab;scroll-behavior:smooth">
+                <sc-for list="{{ queueItems }}" as="qi">
+                  <div style="width:148px;flex-shrink:0;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,16px);overflow:hidden">
+                    <div style="height:96px;background:#EEE9E0 center/cover no-repeat;background-image:url({{ qi.img }})"></div>
+                    <div style="padding:10px 11px 11px">
+                      <div style="font:700 12px var(--display,'Space Grotesk');color:#3B2630;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ qi.name }}</div>
+                      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+                        <span style="font:700 12px var(--display,'Space Grotesk');color:#3B2630">{{ qi.priceLabel }}</span>
+                        <button onclick="{{ qi.onAdd }}" style="background:var(--psoft,#F7E9EC);color:var(--p,#7D1535);border:1px solid var(--pborder,#EAC9D1);border-radius:8px;padding:4px 11px;cursor:pointer;font:700 11px 'Inter'">＋ Add</button>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <!-- combo / goes well with -->
+              <div style="background:#F4EEE7;border:1px solid #ECE6DB;border-radius:var(--radL,18px);padding:14px;margin-top:18px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:26px;height:26px;border-radius:8px;background:var(--asoft,#EEF1DC);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--a2,#7F8E46)" stroke-width="2.2"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4Z"></path><path d="M6 2v2M10 2v2M14 2v2"></path></svg></div>
+                  <div><div style="font:700 13px var(--display,'Space Grotesk');color:#3B2630">Make it a combo</div><div style="font:500 10.5px 'Inter';color:#9A93A6">Goes well with your {{ comboAnchor }} · 10% off</div></div>
+                </div>
+                <div class="scr" ref="{{ dragScroll }}" style="display:flex;gap:11px;overflow-x:auto;margin:13px -14px 0;padding:0 14px 2px;cursor:grab;scroll-behavior:smooth">
+                  <sc-for list="{{ comboItems }}" as="ci">
+                    <div style="width:140px;flex-shrink:0;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,14px);overflow:hidden">
+                      <div style="position:relative;height:84px;background:#EEE9E0 center/cover no-repeat;background-image:url({{ ci.img }})">
+                        <span style="position:absolute;top:7px;left:7px;font:700 8px 'JetBrains Mono',monospace;letter-spacing:.4px;color:#fff;background:var(--a2,#7F8E46);padding:3px 6px;border-radius:6px">COMBO −10%</span>
+                      </div>
+                      <div style="padding:9px 10px 10px">
+                        <div style="font:700 11.5px var(--display,'Space Grotesk');color:#3B2630;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ci.name }}</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:7px">
+                          <span style="display:flex;align-items:baseline;gap:5px"><span style="font:700 12px var(--display,'Space Grotesk');color:var(--p,#7D1535)">{{ ci.comboLabel }}</span><span style="font:500 9.5px 'Inter';color:#B0A9BC;text-decoration:line-through">{{ ci.priceLabel }}</span></span>
+                          <button onclick="{{ ci.onAdd }}" style="background:var(--psoft,#F7E9EC);color:var(--p,#7D1535);border:1px solid var(--pborder,#EAC9D1);border-radius:8px;padding:3px 9px;cursor:pointer;font:700 11px 'Inter'">＋</button>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <!-- full menu (same as vendor page) -->
+              <div style="font:700 14px var(--display,'Space Grotesk');color:#3B2630;margin-top:24px;margin-bottom:13px">Full menu</div>
+              <sc-for list="{{ menuGroups }}" as="grp">
+                <div style="margin-bottom:22px">
+                  <div style="font:700 14px var(--display,'Space Grotesk');color:#3B2630;border-left:3px solid var(--p,#7D1535);padding-left:9px;margin-bottom:13px">{{ grp.cat }}</div>
+                  <sc-for list="{{ grp.items }}" as="item">
+                    <div style="display:flex;gap:13px;align-items:center;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,18px);padding:11px;margin-bottom:11px">
+                      <div style="width:66px;height:66px;border-radius:var(--radM,13px);flex-shrink:0;background:#EEE9E0 center/cover no-repeat;background-image:url({{ item.img }})"></div>
+                      <div style="flex:1;min-width:0">
+                        <div style="font:700 13px var(--display,'Space Grotesk');color:#3B2630">{{ item.name }}</div>
+                        <div style="font:700 12.5px var(--display,'Space Grotesk');color:var(--p,#7D1535);margin-top:3px">{{ item.priceLabel }}</div>
+                        <div style="font:500 11px 'Inter';color:#9A93A6;margin-top:5px;line-height:1.45">{{ item.desc }}</div>
+                        <sc-if value="{{ item.showStock }}" hint-placeholder-val="{{ false }}"><div style="{{ item.stockStyle }}"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;animation:rasaPulse 1.4s infinite"></span>{{ item.stockLabel }}</div></sc-if>
+                      </div>
+                      <div style="flex-shrink:0;align-self:center">
+                        <sc-if value="{{ item.notInCart }}" hint-placeholder-val="{{ true }}">
+                          <button onclick="{{ item.onAdd }}" style="display:inline-flex;align-items:center;gap:5px;background:var(--psoft,#F7E9EC);color:var(--p,#7D1535);border:1px solid var(--pborder,#EAC9D1);border-radius:9px;padding:6px 13px;cursor:pointer;font:700 11px 'Inter'">＋ Add</button>
+                        </sc-if>
+                        <sc-if value="{{ item.inCart }}" hint-placeholder-val="{{ false }}">
+                          <div style="display:inline-flex;align-items:center;gap:14px;background:var(--p,#7D1535);border-radius:9px;padding:6px 12px">
+                            <button onclick="{{ item.onRemove }}" style="background:none;border:none;color:#fff;cursor:pointer;font-size:15px;line-height:1;display:flex">−</button>
+                            <span style="font:700 12px 'Inter';color:#fff">{{ item.qty }}</span>
+                            <button onclick="{{ item.onAdd }}" style="background:none;border:none;color:#fff;cursor:pointer;font-size:15px;line-height:1;display:flex">＋</button>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="position:sticky;bottom:0;left:0;right:0;background:rgba(251,250,247,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px;display:flex;gap:11px;z-index:45;margin-top:14px">
+              <button onclick="{{ goOffers }}" style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:15px 18px;cursor:pointer;box-shadow:0 6px 18px -6px rgba(125,21,53,.55)">
+                <span style="display:flex;align-items:center;gap:9px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="3"></rect><path d="M2 10h20"></path></svg><span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.15"><span style="font:700 14px var(--display,'Space Grotesk');letter-spacing:.2px">Pay bill</span><span style="font:600 10px 'Inter';color:rgba(255,255,255,.78)">Settle at the counter</span></span></span>
+                <span style="display:flex;align-items:center;gap:8px;font:700 15px var(--display,'Space Grotesk')">{{ moneyTotal }} <span style="font-size:16px">→</span></span>
+              </button>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ===================== 2 · ENTER BILL AMOUNT ===================== -->
+          

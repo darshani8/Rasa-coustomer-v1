@@ -1,0 +1,65 @@
+<sc-if value="{{ isPayMethod }}" hint-placeholder-val="{{ false }}">
+          <div style="animation:rasaFade .35s ease;padding-bottom:28px" data-screen-label="Select payment method">
+            <div style="position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:rgba(250,246,243,.92);backdrop-filter:blur(10px);border-bottom:1px solid #EFE9DF">
+              <button onclick="{{ goBillSummary }}" aria-label="Back" style="width:36px;height:36px;border-radius:12px;background:#fff;border:1px solid #ECE6DB;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B2630" stroke-width="2.4"><path d="m15 18-6-6 6-6"></path></svg></button>
+              <span style="font:700 17px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.3px">Select Payment Method</span>
+            </div>
+            <div style="padding:16px 18px 0">
+              <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:1.3px;text-transform:uppercase;color:#A39BB0;margin-bottom:10px">UPI</div>
+              <button onclick="{{ selGpay }}" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #ECE6DB;border-radius:16px;padding:14px;cursor:pointer;text-align:left;margin-bottom:10px">
+                <div style="width:38px;height:38px;border-radius:10px;background:#EEF3FF;display:flex;align-items:center;justify-content:center;flex-shrink:0;font:800 16px var(--display,'Space Grotesk');color:#3E6DB5">G</div>
+                <span style="flex:1;font:700 13px var(--display,'Space Grotesk');color:#3B2630">Google Pay UPI</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.4"><path d="m9 18 6-6-6-6"></path></svg>
+              </button>
+              <button onclick="{{ selAmazonUpi }}" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #ECE6DB;border-radius:16px;padding:14px;cursor:pointer;text-align:left">
+                <div style="width:38px;height:38px;border-radius:10px;background:#FFF3E6;display:flex;align-items:center;justify-content:center;flex-shrink:0;font:800 16px var(--display,'Space Grotesk');color:#E8890C">a</div>
+                <span style="flex:1;font:700 13px var(--display,'Space Grotesk');color:#3B2630">Amazon Pay UPI</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.4"><path d="m9 18 6-6-6-6"></path></svg>
+              </button>
+            </div>
+            <div style="padding:20px 18px 0">
+              <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:1.3px;text-transform:uppercase;color:#A39BB0;margin-bottom:10px">Cards</div>
+              <button onclick="{{ selCard }}" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #ECE6DB;border-radius:16px;padding:14px;cursor:pointer;text-align:left">
+                <div style="width:38px;height:38px;border-radius:10px;background:#F1ECF8;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7E5BB0" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2.5"></rect><path d="M2 10h20"></path></svg></div>
+                <span style="flex:1;font:700 13px var(--display,'Space Grotesk');color:#3B2630">Add credit or debit cards</span>
+                <span style="flex-shrink:0;font:700 11px 'Inter';color:var(--p,#7D1535);background:var(--psoft,#F7E9EC);padding:6px 13px;border-radius:8px">ADD</span>
+              </button>
+            </div>
+            <div style="padding:20px 18px 0">
+              <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:1.3px;text-transform:uppercase;color:#A39BB0;margin-bottom:10px">Wallets</div>
+              <button onclick="{{ selAmazonBal }}" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #ECE6DB;border-radius:16px;padding:14px;cursor:pointer;text-align:left;margin-bottom:10px">
+                <div style="width:38px;height:38px;border-radius:10px;background:#FFF3E6;display:flex;align-items:center;justify-content:center;flex-shrink:0;font:800 16px var(--display,'Space Grotesk');color:#E8890C">a</div>
+                <div style="flex:1;min-width:0"><div style="font:700 13px var(--display,'Space Grotesk');color:#3B2630">Amazon Pay Balance</div><div style="font:500 11px 'Inter';color:#9A93A6;margin-top:2px">Link your Amazon Pay wallet</div></div>
+                <span style="flex-shrink:0;font:700 11px 'Inter';color:var(--p,#7D1535);background:var(--psoft,#F7E9EC);padding:6px 13px;border-radius:8px">ADD</span>
+              </button>
+              <div style="width:100%;display:flex;align-items:center;gap:12px;background:#F7F3EE;border:1px solid #ECE6DB;border-radius:16px;padding:14px;opacity:.7">
+                <div style="width:38px;height:38px;border-radius:10px;background:#EFE7E9;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B4879A" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M9.5 10.5h3.5a1.5 1.5 0 0 1 0 3H9.5"></path></svg></div>
+                <div style="flex:1;min-width:0"><div style="font:700 13px var(--display,'Space Grotesk');color:#8A8394">Rasa Money</div><div style="font:500 10.5px 'Inter';color:#C0392B;margin-top:2px">Unavailable — insufficient balance (₹0)</div></div>
+              </div>
+            </div>
+            <div style="padding:20px 18px 0">
+              <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:1.3px;text-transform:uppercase;color:#A39BB0;margin-bottom:10px">Pay Later</div>
+              <button onclick="{{ selAmazonLater }}" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #ECE6DB;border-radius:16px;padding:14px;cursor:pointer;text-align:left;margin-bottom:10px">
+                <div style="width:38px;height:38px;border-radius:10px;background:#FFF3E6;display:flex;align-items:center;justify-content:center;flex-shrink:0;font:800 16px var(--display,'Space Grotesk');color:#E8890C">a</div>
+                <div style="flex:1;min-width:0"><div style="font:700 13px var(--display,'Space Grotesk');color:#3B2630">Amazon Pay Later</div><div style="font:500 11px 'Inter';color:#9A93A6;margin-top:2px">Link your Amazon Pay Later account</div></div>
+                <span style="flex-shrink:0;font:700 11px 'Inter';color:var(--p,#7D1535);background:var(--psoft,#F7E9EC);padding:6px 13px;border-radius:8px">ADD</span>
+              </button>
+              <button onclick="{{ selLazypay }}" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #ECE6DB;border-radius:16px;padding:14px;cursor:pointer;text-align:left">
+                <div style="width:38px;height:38px;border-radius:10px;background:#EDE9FB;display:flex;align-items:center;justify-content:center;flex-shrink:0;font:800 16px var(--display,'Space Grotesk');color:#6C4FD8">L</div>
+                <div style="flex:1;min-width:0"><div style="font:700 13px var(--display,'Space Grotesk');color:#3B2630">LazyPay</div><div style="font:500 11px 'Inter';color:#9A93A6;margin-top:2px">Link your LazyPay account</div></div>
+                <span style="flex-shrink:0;font:700 11px 'Inter';color:var(--p,#7D1535);background:var(--psoft,#F7E9EC);padding:6px 13px;border-radius:8px">ADD</span>
+              </button>
+            </div>
+            <div style="padding:20px 18px 0">
+              <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:1.3px;text-transform:uppercase;color:#A39BB0;margin-bottom:10px">Netbanking</div>
+              <button onclick="{{ selNetbank }}" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #ECE6DB;border-radius:16px;padding:14px;cursor:pointer;text-align:left">
+                <div style="width:38px;height:38px;border-radius:10px;background:#EAF1FA;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3E6DB5" stroke-width="2"><path d="M3 21h18M5 21V10M19 21V10M3 10l9-6 9 6M9 21v-6h6v6"></path></svg></div>
+                <span style="flex:1;font:700 13px var(--display,'Space Grotesk');color:#3B2630">Netbanking</span>
+                <span style="flex-shrink:0;font:700 11px 'Inter';color:var(--p,#7D1535);background:var(--psoft,#F7E9EC);padding:6px 13px;border-radius:8px">ADD</span>
+              </button>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ===================== 6 · OFFERS (ALL) ===================== -->
+          

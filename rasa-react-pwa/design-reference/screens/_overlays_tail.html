@@ -1,0 +1,149 @@
+<sc-if value="{{ isVendor }}" hint-placeholder-val="{{ false }}">
+          <!-- dim overlay (animates in, taps to close) -->
+          <div onclick="{{ closeQueueSheet }}" style="{{ sheetOverlayStyle }}"></div>
+          <!-- the sheet: slides up to 50% height, sits behind the fixed button -->
+          <div class="sheet" style="{{ sheetStyle }}">
+            <div style="width:40px;height:5px;border-radius:999px;background:#E4DCCF;margin:11px auto 0;flex-shrink:0"></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px 30px 24px">
+              <div style="width:56px;height:56px;border-radius:50%;background:var(--psoft,#F7E9EC);display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              </div>
+              <div style="font:700 18px var(--display,'Space Grotesk');color:#2A1B22;margin-bottom:7px">Join the queue?</div>
+              <div style="font:500 13px 'Inter';color:#6F6A7D;line-height:1.5;max-width:250px;margin-bottom:24px">You'll get a live token and a heads-up when it's almost your turn.</div>
+              <div style="display:flex;gap:10px;width:100%">
+                <button onclick="{{ closeQueueSheet }}" style="flex:1;background:none;color:#6F6A7D;border:1.5px solid #E4DCCF;border-radius:var(--radM,14px);padding:15px 0;font:700 13px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:pointer">No</button>
+                <button onclick="{{ confirmJoinQueue }}" style="flex:2;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radM,14px);padding:15px 0;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">Confirm &amp; join <span>→</span></button>
+              </div>
+            </div>
+          </div>
+          <!-- fixed floating Join-queue button — always above the sheet, never moves -->
+          <div class="dock" style="position:absolute;left:0;right:0;bottom:0;z-index:56;background:rgba(251,250,247,.97);backdrop-filter:blur(12px);border-top:1px solid #EFE9DF;padding:13px 18px 17px;display:flex;gap:10px">
+            <button onclick="{{ parkOrder }}" style="flex:0 0 auto;background:none;color:var(--p,#7D1535);border:1.5px solid var(--p,#7D1535);border-radius:var(--radM,14px);padding:14px 18px;font:700 13px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap">Park order</button>
+            <button onclick="{{ openQueueSheet }}" style="flex:1;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radM,14px);padding:15px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 22px -10px rgba(125,21,53,.6)">Join queue <span>→</span></button>
+          </div>
+
+          <!-- ===== PARK YOUR ORDER — slot-booking sheet ===== -->
+          <div onclick="{{ closeParkSheet }}" style="{{ parkOverlayStyle }}"></div>
+          <div class="sheet" style="{{ parkSheetStyle }}">
+            <div style="width:40px;height:5px;border-radius:999px;background:#D8CFC2;margin:11px auto 3px;flex-shrink:0"></div>
+
+            <!-- header -->
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 20px 14px;flex-shrink:0">
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+                  <span style="width:8px;height:8px;border-radius:50%;background:var(--p,#8A1538);flex-shrink:0"></span>
+                  <span style="font:700 18px var(--display,'Space Grotesk');color:#2A1B22">Park your order</span>
+                </div>
+                <div style="font:500 12.5px 'Inter';color:#6F6A7D;line-height:1.5;max-width:270px">Skip the wait — pick a pickup time and we'll start cooking so it's fresh when you arrive.</div>
+              </div>
+              <button onclick="{{ closeParkSheet }}" style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#fff;border:1px solid #EAE3D9;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6F6A7D">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+              </button>
+            </div>
+
+            <!-- item recap (dynamic — reflects the real cart) -->
+            <sc-if value="{{ parkCartEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="margin:0 20px 14px;flex-shrink:0;display:flex;align-items:center;gap:11px;background:#fff;border-radius:16px;padding:13px 14px;box-shadow:0 2px 10px -6px rgba(40,25,60,.18)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B9558A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--p,#8A1538);flex-shrink:0"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                <span style="font:500 12.5px 'Inter';color:#6F6A7D">Your cart is empty — add items from the menu first.</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ parkHasCart }}" hint-placeholder-val="{{ false }}">
+              <div style="flex-shrink:0;padding:0 20px 14px">
+                <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:1.3px;text-transform:uppercase;color:#A39BB0;margin-bottom:9px">Your order</div>
+                <div class="scr" style="display:flex;flex-direction:column;gap:9px;max-height:156px;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px">
+                  <sc-for list="{{ parkCartLines }}" as="line" hint-placeholder-count="1">
+                    <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:15px;padding:9px 11px;box-shadow:0 2px 10px -7px rgba(40,25,60,.2)">
+                      <div style="width:42px;height:42px;border-radius:11px;flex-shrink:0;background:#EDE3D6 center/cover no-repeat;background-image:url({{ line.img }})"></div>
+                      <div style="flex:1;min-width:0">
+                        <div style="font:700 12.5px 'Inter';color:#2A1B22;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">{{ line.name }}</div>
+                        <div style="font:700 12px 'Inter';color:var(--p,#8A1538)">{{ line.priceLabel }}</div>
+                      </div>
+                      <div style="flex-shrink:0;display:flex;align-items:center;gap:13px;background:#F3EEE8;border-radius:10px;padding:6px 12px">
+                        <button onclick="{{ line.onRemove }}" style="background:none;border:none;cursor:pointer;color:var(--p,#8A1538);font:700 17px 'Inter';line-height:1;padding:0">−</button>
+                        <span style="font:700 13px 'Inter';color:#2A1B22;min-width:10px;text-align:center">{{ line.qty }}</span>
+                        <button onclick="{{ line.onAdd }}" style="background:none;border:none;cursor:pointer;color:var(--p,#8A1538);font:700 17px 'Inter';line-height:1;padding:0">+</button>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- day selector -->
+            <div style="margin:0 20px 14px;flex-shrink:0;display:flex;gap:4px;background:#EAE3D9;border-radius:13px;padding:4px">
+              <sc-if value="{{ parkIsToday }}" hint-placeholder-val="{{ true }}">
+                <button onclick="{{ setParkToday }}" style="flex:1;text-align:center;border:none;border-radius:11px;padding:9px;cursor:pointer;font:700 12px 'Inter';background:var(--p,#8A1538);color:#fff">Today</button>
+                <button onclick="{{ setParkTomorrow }}" style="flex:1;text-align:center;border:none;border-radius:11px;padding:9px;cursor:pointer;font:700 12px 'Inter';background:transparent;color:#6F6A7D">Tomorrow</button>
+              </sc-if>
+              <sc-if value="{{ parkIsTomorrow }}" hint-placeholder-val="{{ false }}">
+                <button onclick="{{ setParkToday }}" style="flex:1;text-align:center;border:none;border-radius:11px;padding:9px;cursor:pointer;font:700 12px 'Inter';background:transparent;color:#6F6A7D">Today</button>
+                <button onclick="{{ setParkTomorrow }}" style="flex:1;text-align:center;border:none;border-radius:11px;padding:9px;cursor:pointer;font:700 12px 'Inter';background:var(--p,#8A1538);color:#fff">Tomorrow</button>
+              </sc-if>
+            </div>
+
+            <!-- scrollable slot grid -->
+            <div class="scr" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:0 20px 4px">
+              <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:1.3px;text-transform:uppercase;color:#A39BB0;margin-bottom:10px">Pickup window</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+                <sc-for list="{{ parkSlots }}" as="slot" hint-placeholder-count="6">
+                  <sc-if value="{{ slot.fSelected }}" hint-placeholder-val="{{ false }}">
+                    <button onclick="{{ slot.onClick }}" style="position:relative;text-align:left;border-radius:14px;padding:12px 13px 11px;cursor:pointer;background:var(--p,#8A1538);color:#fff;border:1.5px solid var(--p,#8A1538);box-shadow:0 6px 16px -8px rgba(138,21,56,.55)">
+                      <div style="display:flex;align-items:center;gap:6px">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M20 6 9 17l-5-5"></path></svg>
+                        <span style="font:700 12.5px 'Inter'">{{ slot.label }}</span>
+                      </div>
+                      <sc-if value="{{ slot.isLimited }}" hint-placeholder-val="{{ false }}">
+                        <div style="font:600 10px 'Inter';color:rgba(255,255,255,.85);margin-top:3px">Few left</div>
+                      </sc-if>
+                    </button>
+                  </sc-if>
+                  <sc-if value="{{ slot.fNormal }}" hint-placeholder-val="{{ true }}">
+                    <button onclick="{{ slot.onClick }}" style="position:relative;text-align:left;border-radius:14px;padding:12px 13px 11px;cursor:pointer;background:#fff;color:#2A1B22;border:1.5px solid #ECE6DB;box-shadow:0 2px 8px -5px rgba(40,25,60,.2)">
+                      <div style="display:flex;align-items:center;gap:6px">
+                        <span style="width:6px;height:6px;border-radius:50%;background:#9BAA5C;flex-shrink:0"></span>
+                        <span style="font:700 12.5px 'Inter'">{{ slot.label }}</span>
+                      </div>
+                      <sc-if value="{{ slot.isLimited }}" hint-placeholder-val="{{ false }}">
+                        <div style="font:600 10px 'Inter';color:#B08900;margin-top:3px">Few left</div>
+                      </sc-if>
+                    </button>
+                  </sc-if>
+                  <sc-if value="{{ slot.fFull }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:relative;text-align:left;border-radius:14px;padding:12px 13px 11px;background:#EDE7DF;color:#B4ADA2;border:1.5px solid transparent;opacity:.75;cursor:not-allowed">
+                      <div style="display:flex;align-items:center;gap:6px">
+                        <span style="width:6px;height:6px;border-radius:50%;background:#C8C0B4;flex-shrink:0"></span>
+                        <span style="font:700 12.5px 'Inter'">{{ slot.label }}</span>
+                      </div>
+                      <div style="font:600 10px 'Inter';color:#B4ADA2;margin-top:3px">Full</div>
+                    </div>
+                  </sc-if>
+                </sc-for>
+              </div>
+              <sc-if value="{{ parkHasSlot }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:7px;margin:14px 2px 2px">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6F6A7D" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+                  <span style="font:500 11.5px 'Inter';color:#6F6A7D">{{ leaveByText }}</span>
+                </div>
+              </sc-if>
+            </div>
+
+            <!-- sticky footer CTA -->
+            <div style="flex-shrink:0;background:rgba(243,238,232,.97);backdrop-filter:blur(10px);border-top:1px solid #E6DFD4;padding:13px 20px 18px">
+              <sc-if value="{{ parkCanConfirm }}" hint-placeholder-val="{{ false }}">
+                <button onclick="{{ parkConfirm }}" style="width:100%;color:#fff;border:none;border-radius:15px;padding:16px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--p,#8A1538);cursor:pointer;box-shadow:0 8px 22px -10px rgba(138,21,56,.6)">{{ parkCtaLabel }} <span>→</span></button>
+              </sc-if>
+              <sc-if value="{{ parkCantConfirm }}" hint-placeholder-val="{{ true }}">
+                <button onclick="{{ parkConfirm }}" style="width:100%;color:#fff;border:none;border-radius:15px;padding:16px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:8px;background:#D8C3CB;cursor:pointer;opacity:.95">{{ parkCtaLabel }}</button>
+              </sc-if>
+              <button onclick="{{ openQueueSheet }}" style="width:100%;background:none;border:none;cursor:pointer;padding:12px 0 2px;font:600 12px 'Inter';color:#6F6A7D">Join the live queue instead</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- home indicator -->
+        <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:128px;height:5px;border-radius:999px;background:#1F1A2E;opacity:.28;z-index:70;pointer-events:none"></div>
+      </div>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,79 @@
+<sc-if value="{{ isBooking }}" hint-placeholder-val="{{ false }}">
+          <div style="animation:rasaFade .35s ease;display:flex;flex-direction:column;min-height:100%">
+            <div style="position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:rgba(250,246,243,.92);backdrop-filter:blur(10px);border-bottom:1px solid #EFE9DF">
+              <button onclick="{{ goOffers }}" style="width:36px;height:36px;border-radius:12px;background:#fff;border:1px solid #ECE6DB;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B2630" stroke-width="2.4"><path d="m15 18-6-6 6-6"></path></svg></button>
+              <span style="font:700 19px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.4px">Booking Summary</span>
+            </div>
+
+            <div style="padding:18px 22px 0;flex:1">
+              <!-- order lines -->
+              <div style="margin-bottom:18px">
+                <sc-for list="{{ bookingLines }}" as="bl">
+                  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:9px">
+                    <span style="font:600 12.5px 'Inter';color:#9A93A6;width:24px;flex-shrink:0">{{ bl.qtyLabel }}</span>
+                    <span style="flex:1;font:500 13px 'Inter';color:#3B2630">{{ bl.name }}</span>
+                    <span style="font:600 12.5px 'JetBrains Mono',monospace;color:#6F6A7D">{{ bl.amt }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <!-- info card -->
+              <div style="background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,18px);overflow:hidden;margin-bottom:24px">
+                <div style="display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid #F1EBE3">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.1" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+                  <div><div style="font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.6px">Date and Time</div><div style="font:600 13px 'Inter';color:#3B2630;margin-top:3px">Saturday, Oct 14 at 7:00 PM</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid #F1EBE3">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.1" style="flex-shrink:0"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>
+                  <div><div style="font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.6px">Location</div><div style="font:600 13px 'Inter';color:#3B2630;margin-top:3px">{{ vName }}, {{ vArea }}</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid #F1EBE3">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.1" style="flex-shrink:0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg>
+                  <div><div style="font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.6px">Number of Items</div><div style="font:600 13px 'Inter';color:#3B2630;margin-top:3px">{{ bookingCount }} Items</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:13px;padding:14px 16px">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.1" style="flex-shrink:0"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2A2 2 0 0 1 2.8 12V4.8A2 2 0 0 1 4.8 2.8H12a2 2 0 0 1 1.4.6l7.2 7.2a2 2 0 0 1 0 2.8Z"></path><circle cx="7.5" cy="7.5" r="1.5" fill="var(--p,#7D1535)"></circle></svg>
+                  <div><div style="font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.6px">Coupons</div><div style="font:600 13px 'Inter';color:#3B2630;margin-top:3px">15% Discount Applied</div></div>
+                </div>
+              </div>
+
+              <!-- featured items -->
+              <div style="font:700 14px var(--display,'Space Grotesk');color:#3B2630;margin-bottom:12px">Featured Items</div>
+              <div class="scr" ref="{{ dragScroll }}" style="display:flex;gap:13px;overflow-x:auto;margin:0 -22px 24px;padding:0 22px 4px;cursor:grab;scroll-behavior:smooth">
+                <sc-for list="{{ featuredItems }}" as="fi">
+                  <div style="width:188px;flex-shrink:0;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,18px);overflow:hidden">
+                    <div style="height:118px;background:#EEE9E0 center/cover no-repeat;background-image:url({{ fi.img }})"></div>
+                    <div style="padding:12px 13px 14px">
+                      <div style="display:flex;align-items:center;gap:7px"><span style="font:700 13px var(--display,'Space Grotesk');color:#3B2630;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ fi.name }}</span><sc-if value="{{ fi.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="flex-shrink:0;font:700 7.5px 'JetBrains Mono',monospace;letter-spacing:.4px;color:var(--p,#7D1535);background:var(--psoft,#F7E9EC);padding:3px 6px;border-radius:6px">{{ fi.badge }}</span></sc-if></div>
+                      <div style="font:500 11px 'Inter';color:#9A93A6;margin-top:5px">{{ fi.note }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <!-- action rows -->
+              <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+                <button style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,14px);padding:15px;cursor:pointer;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.1"><path d="M4 6h16M4 12h16M4 18h10"></path></svg><span style="flex:1;font:600 13px 'Inter';color:#3B2630">Add a special request</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.4"><path d="m9 18 6-6-6-6"></path></svg></button>
+                <button style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,14px);padding:15px;cursor:pointer;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.1"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg><span style="flex:1;font:600 13px 'Inter';color:#3B2630">Modification</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.4"><path d="m9 18 6-6-6-6"></path></svg></button>
+                <button style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,14px);padding:15px;cursor:pointer;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.1"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M8 2v4M16 2v4M3 10h18M9 14l6 6M15 14l-6 6"></path></svg><span style="flex:1;font:600 13px 'Inter';color:#3B2630">Cancellation with time constraints</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.4"><path d="m9 18 6-6-6-6"></path></svg></button>
+              </div>
+
+              <!-- detailed summary -->
+              <div style="font:700 14px var(--display,'Space Grotesk');color:#3B2630;margin-bottom:12px">Detailed Summary</div>
+              <div style="background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,18px);padding:18px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;font:500 13px 'Inter';color:#6F6A7D;margin-bottom:13px"><span>Base Rate</span><span style="font:600 13px 'JetBrains Mono',monospace;color:#3B2630">{{ moneySub }}</span></div>
+                <div style="display:flex;justify-content:space-between;font:500 13px 'Inter';color:#6F6A7D;margin-bottom:13px"><span>Service Fee</span><span style="font:600 13px 'JetBrains Mono',monospace;color:#3B2630">{{ moneyFee }}</span></div>
+                <div style="display:flex;justify-content:space-between;font:500 13px 'Inter';color:#2F9E6E;margin-bottom:13px"><span>Discount (15%)</span><span style="font:600 13px 'JetBrains Mono',monospace">−{{ moneyDisc }}</span></div>
+                <div style="border-top:1px solid #EFE9DF;padding-top:14px;display:flex;justify-content:space-between;align-items:center"><span style="font:700 16px var(--display,'Space Grotesk');color:#3B2630">Total</span><span style="font:700 19px var(--display,'Space Grotesk');color:var(--p,#7D1535)">{{ moneyTotal }}</span></div>
+                <div style="font:400 10.5px 'Inter';color:#B0A9BC;font-style:italic;margin-top:11px;line-height:1.5">Overall summary line by line provided here for transparency.</div>
+              </div>
+            </div>
+
+            <div style="position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px;z-index:45">
+              <button onclick="{{ goPay }}" style="width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"></path></svg> Proceed to Book</button>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ===================== PAYMENT ===================== -->
+          

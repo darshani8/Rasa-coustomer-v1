@@ -1,0 +1,35 @@
+<sc-if value="{{ isSuccess }}" hint-placeholder-val="{{ false }}">
+          <div style="animation:rasaFade .35s ease;padding:0 22px 32px">
+            <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:40px">
+              <div style="width:84px;height:84px;border-radius:50%;background:#E4F4EC;display:flex;align-items:center;justify-content:center"><div style="width:58px;height:58px;border-radius:50%;background:#2F9E6E;display:flex;align-items:center;justify-content:center"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="m5 12 5 5 9-10"></path></svg></div></div>
+              <div style="font:700 23px var(--display,'Space Grotesk');color:#3B2630;margin-top:20px;letter-spacing:-.3px">Payment successful</div>
+              <div style="font:500 12.5px 'Inter';color:#9A93A6;margin-top:7px;line-height:1.55;max-width:260px">Your order of <b style="color:#3B2630">{{ moneyTotal }}</b> is confirmed. {{ vName }} has been notified.</div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:17px;margin-top:26px">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:13px;border-bottom:1px solid #EFE9DF">
+                <span style="font:600 10px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px">Order receipt</span>
+                <span style="font:600 11.5px 'Inter';color:var(--p,#7D1535)">View invoice</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+                <div><div style="font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase">Order ID</div><div style="font:600 13px 'JetBrains Mono',monospace;color:#3B2630;margin-top:3px">ORD_7829104</div></div>
+                <div style="text-align:right"><div style="font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase">Paid via</div><div style="font:700 13px var(--display,'Space Grotesk');color:#3B2630;margin-top:3px">{{ payName }}</div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:11px;background:#F4EEE7;border:1px solid #EFE9DF;border-radius:var(--radM,13px);padding:11px;margin-top:14px">
+                <div style="width:40px;height:40px;border-radius:10px;flex-shrink:0;background:#EEE9E0 center/cover no-repeat;background-image:url({{ vPhoto }})"></div>
+                <div><div style="font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase">Vendor</div><div style="font:700 13px var(--display,'Space Grotesk');color:#3B2630;margin-top:2px">{{ vName }}</div></div>
+              </div>
+            </div>
+
+            <div style="background:var(--psoft,#F7E9EC);border:1px solid var(--pborder,#EAC9D1);border-radius:var(--radL,16px);padding:13px 15px;margin-top:14px;display:flex;align-items:center;gap:11px">
+              <div style="width:36px;height:36px;border-radius:11px;background:var(--p,#7D1535);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg></div>
+              <span style="font:500 12px 'Inter';color:#5A5368">You earned <b style="color:var(--p,#7D1535)">40 points</b> — redeem on your next order.</span>
+            </div>
+
+            <button onclick="{{ goQueue }}" style="width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:pointer;margin-top:22px;display:flex;align-items:center;justify-content:center;gap:8px">Track queue status <span>→</span></button>
+            <div style="text-align:center;margin-top:14px"><span onclick="{{ goHome }}" style="font:600 12px 'Inter';color:#9A93A6;cursor:pointer">Back to home</span></div>
+          </div>
+          </sc-if>
+
+          <!-- ===================== FAILED ===================== -->
+          

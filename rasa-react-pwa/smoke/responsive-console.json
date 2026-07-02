@@ -1,0 +1,52 @@
+[
+  {
+    "viewport": "mobile-s",
+    "type": "debug",
+    "text": "[vite] connecting..."
+  },
+  {
+    "viewport": "mobile-s",
+    "type": "debug",
+    "text": "[vite] connected."
+  },
+  {
+    "viewport": "mobile-m",
+    "type": "debug",
+    "text": "[vite] connecting..."
+  },
+  {
+    "viewport": "mobile-m",
+    "type": "debug",
+    "text": "[vite] connected."
+  },
+  {
+    "viewport": "tablet",
+    "type": "debug",
+    "text": "[vite] connecting..."
+  },
+  {
+    "viewport": "tablet",
+    "type": "debug",
+    "text": "[vite] connected."
+  },
+  {
+    "viewport": "laptop",
+    "type": "debug",
+    "text": "[vite] connecting..."
+  },
+  {
+    "viewport": "laptop",
+    "type": "debug",
+    "text": "[vite] connected."
+  },
+  {
+    "viewport": "desktop",
+    "type": "debug",
+    "text": "[vite] connecting..."
+  },
+  {
+    "viewport": "desktop",
+    "type": "debug",
+    "text": "[vite] connected."
+  }
+]

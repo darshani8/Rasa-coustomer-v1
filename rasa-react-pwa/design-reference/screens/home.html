@@ -1,0 +1,183 @@
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+          <div class="pg-wide" data-screen-label="Home" style="animation:rasaFade .35s ease;padding-bottom:28px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 22px 14px">
+              <button onclick="{{ goLocation }}" style="background:none;border:none;padding:0;cursor:pointer;text-align:left">
+                <div style="font:600 10px 'JetBrains Mono',monospace;letter-spacing:1px;color:#A39BB0;text-transform:uppercase">Delivering to</div>
+                <div style="display:flex;align-items:center;gap:5px;margin-top:3px">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>
+                  <span style="font:700 14px var(--display,'Space Grotesk');color:#3B2630">{{ location }}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B2630" stroke-width="2.4"><path d="m6 9 6 6 6-6"></path></svg>
+                </div>
+              </button>
+              <button onclick="{{ goProfile }}" aria-label="Profile" style="width:42px;height:42px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(60,40,20,.12);padding:0;cursor:pointer;flex-shrink:0;background:#EEE9E0 center/cover no-repeat;background-image:url(&quot;47c2178c-cf66-40f1-9b78-380490015ec7&quot;)"></button>
+            </div>
+
+            <!-- diet filter -->
+            <div style="display:flex;justify-content:flex-end;gap:8px;padding:0 22px 12px">
+              <div style="position:relative">
+                <button onclick="{{ dietBtn.onToggle }}" style="{{ dietBtn.btnStyle }}">
+                  <sc-if value="{{ dietBtn.showDot }}" hint-placeholder-val="{{ false }}"><span style="{{ dietBtn.dotStyle }}"><span style="{{ dietBtn.dotInner }}"></span></span></sc-if>
+                  <sc-if value="{{ dietBtn.isAll }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 5h18M6 12h12M10 19h4"></path></svg></sc-if>
+                  {{ dietBtn.label }}
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="transform:{{ dietBtn.chevron }};transition:transform .15s"><path d="m6 9 6 6 6-6"></path></svg>
+                </button>
+                <sc-if value="{{ dietBtn.open }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;right:0;top:40px;width:170px;background:#fff;border:1px solid #ECE6DB;border-radius:13px;box-shadow:0 12px 30px -10px rgba(60,40,20,.35);overflow:hidden;z-index:50">
+                    <div style="font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.6px;padding:10px 13px 5px">Show</div>
+                    <sc-for list="{{ dietMenu }}" as="dm">
+                      <button onclick="{{ dm.onClick }}" style="{{ dm.rowStyle }}">
+                        <sc-if value="{{ dm.showDot }}" hint-placeholder-val="{{ false }}"><span style="{{ dm.dotStyle }}"><span style="{{ dm.dotInner }}"></span></span></sc-if>
+                        <sc-if value="{{ dm.isAll }}" hint-placeholder-val="{{ true }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 5h18M6 12h12M10 19h4"></path></svg></sc-if>
+                        <span style="flex:1">{{ dm.label }}</span>
+                        <sc-if value="{{ dm.active }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--p,#7D1535)" stroke-width="2.6"><path d="m5 12 5 5 9-10"></path></svg></sc-if>
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+
+            <!-- search -->
+            <div style="padding:0 22px">
+              <button onclick="{{ openSearch }}" style="width:100%;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,16px);padding:13px 15px;cursor:pointer;text-align:left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B0A9BC" stroke-width="2.2"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
+                <span style="font:500 13.5px 'Inter';color:#A39BB0">Search vendors, dishes…</span>
+              </button>
+            </div>
+
+            <!-- hero -->
+            <div style="padding:18px 22px 0">
+              <div style="position:relative;background:linear-gradient(135deg,var(--p,#7D1535),var(--p2,#9E2A48));border-radius:24px;padding:22px;overflow:hidden">
+                <div style="position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.08)"></div>
+                <div style="position:absolute;left:-20px;bottom:-40px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,.10)"></div>
+                <div style="position:relative">
+                  <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border-radius:999px;padding:5px 11px;font:600 10px 'JetBrains Mono',monospace;letter-spacing:.5px;color:#fff;text-transform:uppercase">First order</div>
+                  <div style="font:700 23px var(--display,'Space Grotesk');color:#fff;line-height:1.15;margin-top:12px;max-width:230px;letter-spacing:-.3px">20% off your first order.</div>
+                  <button onclick="{{ openArtiste }}" style="margin-top:16px;background:#fff;color:var(--p,#7D1535);border:none;border-radius:999px;padding:10px 18px;font:700 12.5px 'Inter';cursor:pointer;display:inline-flex;align-items:center;gap:6px">Order ahead <span style="font-size:14px">→</span></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bangalore food streets -->
+            <div style="padding:26px 0 0">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;padding:0 22px">
+                <div style="font:700 17px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.3px">Bangalore food streets</div>
+                <span style="font:600 12px 'Inter';color:var(--p,#7D1535)">See all</span>
+              </div>
+              <div class="scr" ref="{{ dragScroll }}" style="display:flex;gap:11px;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;padding:0 22px 4px;cursor:grab;scroll-behavior:smooth">
+                <sc-for list="{{ streets }}" as="st" hint-placeholder-count="5">
+                  <button onclick="{{ st.onClick }}" aria-label="{{ st.ariaLabel }}" style="scroll-snap-align:start;flex-shrink:0;width:126px;text-align:left;padding:0;border:none;background:none;cursor:pointer">
+                    <div style="position:relative;height:150px;border-radius:16px;overflow:hidden;background:#EEE9E0;box-shadow:0 5px 15px -9px rgba(40,25,60,.45)">
+                      <div style="position:absolute;inset:0;background:#EEE9E0 center/cover no-repeat;background-image:url({{ st.img }})"></div>
+                      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(20,14,26,.86) 0%,rgba(20,14,26,.28) 46%,rgba(20,14,26,.14) 100%)"></div>
+                      <!-- area landmark emblem -->
+                      <div style="position:absolute;top:9px;left:9px;width:27px;height:27px;border-radius:50%;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.36);display:flex;align-items:center;justify-content:center">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ st.icon }}"></path></svg>
+                      </div>
+                      <!-- transparent coming-soon badge -->
+                      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+                        <span style="font:700 7.5px 'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:#fff;background:rgba(255,255,255,.15);backdrop-filter:blur(3px);border:1px solid rgba(255,255,255,.3);padding:5px 10px;border-radius:999px">Coming soon</span>
+                      </div>
+                      <div style="position:absolute;left:11px;right:11px;bottom:11px">
+                        <div style="font:700 12px var(--display,'Space Grotesk');color:#fff;line-height:1.18;letter-spacing:-.2px;text-shadow:0 1px 6px rgba(0,0,0,.45)">{{ st.name }}</div>
+                        <div style="font:500 9.5px 'Inter';color:rgba(255,255,255,.78);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ st.area }}</div>
+                      </div>
+                    </div>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- categories -->
+            <div style="display:flex;gap:9px;overflow-x:auto;padding:18px 22px 0" class="scr">
+              <sc-for list="{{ categories }}" as="c">
+                <button onclick="{{ c.onClick }}" style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:7px;width:62px;background:none;border:none;padding:0;cursor:pointer">
+                  <div style="{{ c.ringStyle }}"></div>
+                  <span style="{{ c.labelStyle }}">{{ c.name }}</span>
+                </button>
+              </sc-for>
+            </div>
+
+            <!-- vendors -->
+            <div style="padding:24px 22px 0">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+                <div style="font:700 17px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.3px">Order ahead, skip the wait</div>
+                <span style="font:600 12px 'Inter';color:var(--p,#7D1535)">See all</span>
+              </div>
+              <div class="scr" ref="{{ dragScroll }}" style="display:flex;gap:14px;overflow-x:auto;margin:0 -22px;padding:0 22px 4px;cursor:grab;scroll-behavior:smooth" data-comment-anchor="d9dcf50c8a-div">
+              <sc-for list="{{ homeVendors }}" as="vd">
+                <button onclick="{{ vd.onClick }}" style="width:270px;flex-shrink:0;text-align:left;padding:0;border:1px solid #ECE6DB;background:#fff;border-radius:var(--radXL,22px);overflow:hidden;cursor:pointer">
+                  <div style="position:relative;height:148px;overflow:hidden;background:#EEE9E0">
+                    <div style="position:absolute;inset:0;background:#EEE9E0 center/cover no-repeat;background-image:url({{ vd.photo }});animation:rasaZoom 13s ease-in-out infinite alternate"></div>
+                    <div style="position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.34),transparent);animation:rasaShine 6.5s ease-in-out infinite;pointer-events:none;z-index:1"></div>
+                    <div style="position:absolute;bottom:5px;left:14px;display:flex;gap:9px;pointer-events:none;z-index:1">
+                      <span style="width:6px;height:20px;border-radius:50%;background:rgba(255,255,255,.85);filter:blur(4px);animation:rasaSteam 3.4s ease-in infinite"></span>
+                      <span style="width:6px;height:20px;border-radius:50%;background:rgba(255,255,255,.85);filter:blur(4px);animation:rasaSteam 3.4s ease-in infinite 1s"></span>
+                      <span style="width:6px;height:20px;border-radius:50%;background:rgba(255,255,255,.85);filter:blur(4px);animation:rasaSteam 3.4s ease-in infinite 1.9s"></span>
+                    </div>
+                    <div style="position:absolute;top:11px;left:11px;display:flex;align-items:center;gap:6px;background:rgba(251,250,247,.94);backdrop-filter:blur(4px);color:var(--adeep,#6E7A38);font:700 11px 'Inter';padding:6px 10px;border-radius:999px;z-index:2">
+                      <span style="width:7px;height:7px;border-radius:50%;background:var(--a,#9BAA5C);animation:rasaPulse 1.4s infinite"></span>{{ vd.waitLabel }}
+                    </div>
+                    <div style="position:absolute;top:11px;right:11px;display:flex;align-items:center;gap:5px;background:rgba(22,19,32,.62);backdrop-filter:blur(4px);color:#fff;font:700 9px 'JetBrains Mono',monospace;letter-spacing:.5px;padding:5px 8px;border-radius:999px;z-index:2">
+                      <span style="width:6px;height:6px;border-radius:50%;background:var(--alite,#C2D89B);animation:rasaPulse 1.2s infinite"></span>{{ vd.liveLabel }}
+                    </div>
+                  </div>
+                  <div style="padding:13px 15px 15px">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+                      <div style="font:700 16px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.2px">{{ vd.name }}</div>
+                      <div style="display:flex;align-items:center;gap:3px;background:var(--psoft,#F7E9EC);color:var(--p,#7D1535);font:700 12px 'Inter';padding:4px 8px;border-radius:9px;white-space:nowrap">★ {{ vd.rating }}</div>
+                    </div>
+                    <div style="font:500 12.5px 'Inter';color:#9A93A6;margin-top:4px">{{ vd.cuisine }}</div>
+                    <div style="display:flex;align-items:center;gap:5px;margin-top:9px">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>
+                      <span style="font:500 12px 'Inter';color:#B0A9BC">{{ vd.area }}</span>
+                    </div>
+                  </div>
+                </button>
+              </sc-for>
+              </div>
+            </div>
+
+            <!-- ALL FOOD TRUCKS (vertical list) -->
+            <div style="padding:28px 22px 0">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px">
+                <div style="font:700 17px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.3px">All food trucks</div>
+                <span style="font:600 11px 'JetBrains Mono',monospace;color:#A39BB0;letter-spacing:.5px">{{ vendorCount }} LIVE</span>
+              </div>
+              <div style="font:500 12.5px 'Inter';color:#9A93A6;margin-bottom:14px">Every truck on the road near you, right now</div>
+              <div class="vgrid">
+              <sc-for list="{{ homeVendors }}" as="vd">
+                <button onclick="{{ vd.onClick }}" style="display:flex;align-items:center;gap:13px;width:100%;text-align:left;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,18px);padding:10px;cursor:pointer;margin-bottom:11px">
+                  <div style="position:relative;width:74px;height:74px;border-radius:var(--radM,14px);overflow:hidden;flex-shrink:0;background:#EEE9E0">
+                    <div style="position:absolute;inset:0;background:#EEE9E0 center/cover no-repeat;background-image:url({{ vd.photo }});animation:rasaZoom 14s ease-in-out infinite alternate"></div>
+                    <div style="position:absolute;bottom:5px;left:6px;display:flex;align-items:center;gap:4px;background:rgba(22,19,32,.6);backdrop-filter:blur(3px);padding:2px 5px;border-radius:999px">
+                      <span style="width:5px;height:5px;border-radius:50%;background:var(--alite,#C2D89B);animation:rasaPulse 1.2s infinite"></span>
+                      <span style="font:700 7px 'JetBrains Mono',monospace;color:#fff;letter-spacing:.4px">LIVE</span>
+                    </div>
+                  </div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                      <div style="font:700 14.5px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ vd.name }}</div>
+                      <div style="display:flex;align-items:center;gap:3px;background:var(--psoft,#F7E9EC);color:var(--p,#7D1535);font:700 11px 'Inter';padding:3px 7px;border-radius:8px;flex-shrink:0">★ {{ vd.rating }}</div>
+                    </div>
+                    <div style="font:500 11.5px 'Inter';color:#9A93A6;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ vd.cuisine }}</div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+                      <div style="display:flex;align-items:center;gap:5px;background:var(--asoft,#EEF1DC);color:var(--adeep,#6E7A38);font:700 10.5px 'Inter';padding:3px 8px;border-radius:7px">
+                        <span style="width:5px;height:5px;border-radius:50%;background:var(--a,#9BAA5C);animation:rasaPulse 1.4s infinite"></span>{{ vd.waitLabel }}
+                      </div>
+                      <div style="display:flex;align-items:center;gap:4px;min-width:0">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.2" style="flex-shrink:0"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>
+                        <span style="font:500 11px 'Inter';color:#B0A9BC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ vd.area }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C3BCCB" stroke-width="2.4" style="flex-shrink:0"><path d="m9 18 6-6-6-6"></path></svg>
+                </button>
+              </sc-for>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ===================== CATEGORY RESULTS ===================== -->
+          
