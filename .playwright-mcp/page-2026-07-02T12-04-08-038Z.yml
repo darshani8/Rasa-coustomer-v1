@@ -1,0 +1,502 @@
+- generic [ref=f1e3]:
+  - navigation [ref=f1e4]:
+    - button "R Rasa" [ref=f1e5] [cursor=pointer]:
+      - generic [ref=f1e6]: R
+      - generic [ref=f1e7]: Rasa
+    - generic [ref=f1e8]:
+      - button "Home" [ref=f1e9] [cursor=pointer]
+      - button "Search" [ref=f1e10] [cursor=pointer]
+      - button "Orders" [ref=f1e11] [cursor=pointer]
+      - button "Queue" [ref=f1e12] [cursor=pointer]
+      - button "Profile" [ref=f1e13] [cursor=pointer]
+    - button "Profile" [ref=f1e14] [cursor=pointer]:
+      - img [ref=f1e15]
+  - generic [ref=f1e18]:
+    - generic [ref=f1e294]:
+      - generic [ref=f1e295]:
+        - button "Delivering to Indiranagar, BLR" [ref=f1e296] [cursor=pointer]:
+          - generic [ref=f1e297]: Delivering to
+          - generic [ref=f1e298]:
+            - img [ref=f1e299]
+            - generic [ref=f1e301]: Indiranagar, BLR
+            - img [ref=f1e302]
+        - button "Profile" [ref=f1e304] [cursor=pointer]:
+          - img [ref=f1e305]
+      - button "All trucks" [ref=f1e310] [cursor=pointer]:
+        - img [ref=f1e311]
+        - text: All trucks
+        - img [ref=f1e313]
+      - button "Search vendors, dishes…" [ref=f1e316] [cursor=pointer]:
+        - img [ref=f1e317]
+        - generic [ref=f1e320]: Search vendors, dishes…
+      - generic [ref=f1e325]:
+        - generic [ref=f1e326]: First order
+        - generic [ref=f1e327]: 20% off your first order.
+        - button "Order ahead →" [ref=f1e328] [cursor=pointer]:
+          - text: Order ahead
+          - generic [ref=f1e329]: →
+      - generic [ref=f1e330]:
+        - generic [ref=f1e331]:
+          - generic [ref=f1e332]: Bangalore food streets
+          - generic [ref=f1e333]: See all
+        - generic [ref=f1e334]:
+          - button "VV Puram Food Street, Bangalore South, 3 street-food trucks" [ref=f1e335] [cursor=pointer]:
+            - generic [ref=f1e336]:
+              - img [ref=f1e340]
+              - generic:
+                - generic: Coming soon
+              - generic [ref=f1e342]:
+                - generic [ref=f1e343]: VV Puram Food Street
+                - generic [ref=f1e344]: Bangalore South
+          - button "Indiranagar 100ft Rd, East Bangalore, 2 street-food trucks" [ref=f1e345] [cursor=pointer]:
+            - generic [ref=f1e346]:
+              - img [ref=f1e350]
+              - generic:
+                - generic: Coming soon
+              - generic [ref=f1e352]:
+                - generic [ref=f1e353]: Indiranagar 100ft Rd
+                - generic [ref=f1e354]: East Bangalore
+          - button "Vijayanagar Food Street, West Bangalore, 2 street-food trucks" [ref=f1e355] [cursor=pointer]:
+            - generic [ref=f1e356]:
+              - img [ref=f1e360]
+              - generic:
+                - generic: Coming soon
+              - generic [ref=f1e362]:
+                - generic [ref=f1e363]: Vijayanagar Food Street
+                - generic [ref=f1e364]: West Bangalore
+          - button "Koramangala, South Bangalore, 3 street-food trucks" [ref=f1e365] [cursor=pointer]:
+            - generic [ref=f1e366]:
+              - img [ref=f1e370]
+              - generic:
+                - generic: Coming soon
+              - generic [ref=f1e372]:
+                - generic [ref=f1e373]: Koramangala
+                - generic [ref=f1e374]: South Bangalore
+          - button "Jayanagar 4th Block, South Bangalore, 2 street-food trucks" [ref=f1e375] [cursor=pointer]:
+            - generic [ref=f1e376]:
+              - img [ref=f1e380]
+              - generic:
+                - generic: Coming soon
+              - generic [ref=f1e382]:
+                - generic [ref=f1e383]: Jayanagar 4th Block
+                - generic [ref=f1e384]: South Bangalore
+          - button "Malleshwaram 8th Cross, North Bangalore, 3 street-food trucks" [ref=f1e385] [cursor=pointer]:
+            - generic [ref=f1e386]:
+              - img [ref=f1e390]
+              - generic:
+                - generic: Coming soon
+              - generic [ref=f1e392]:
+                - generic [ref=f1e393]: Malleshwaram 8th Cross
+                - generic [ref=f1e394]: North Bangalore
+          - button "Shivajinagar, Central Bangalore, 2 street-food trucks" [ref=f1e395] [cursor=pointer]:
+            - generic [ref=f1e396]:
+              - img [ref=f1e400]
+              - generic:
+                - generic: Coming soon
+              - generic [ref=f1e402]:
+                - generic [ref=f1e403]: Shivajinagar
+                - generic [ref=f1e404]: Central Bangalore
+          - button "Frazer Town · Mosque Rd, North-East Bangalore, 3 street-food trucks" [ref=f1e405] [cursor=pointer]:
+            - generic [ref=f1e406]:
+              - img [ref=f1e410]
+              - generic:
+                - generic: Coming soon
+              - generic [ref=f1e412]:
+                - generic [ref=f1e413]: Frazer Town · Mosque Rd
+                - generic [ref=f1e414]: North-East Bangalore
+      - generic [ref=f1e415]:
+        - button "Chaat" [ref=f1e416] [cursor=pointer]:
+          - generic [ref=f1e418]: Chaat
+        - button "Biryani" [ref=f1e419] [cursor=pointer]:
+          - generic [ref=f1e421]: Biryani
+        - button "Dosa" [ref=f1e422] [cursor=pointer]:
+          - generic [ref=f1e424]: Dosa
+        - button "Tandoor" [ref=f1e425] [cursor=pointer]:
+          - generic [ref=f1e427]: Tandoor
+        - button "Curries" [ref=f1e428] [cursor=pointer]:
+          - generic [ref=f1e430]: Curries
+      - generic [ref=f1e431]:
+        - generic [ref=f1e432]:
+          - generic [ref=f1e433]: Order ahead, skip the wait
+          - generic [ref=f1e434]: See all
+        - generic [ref=f1e435]:
+          - button "7 min queue ON THE ROAD Biryani Junction ★ 4.9 Hyderabadi Biryani · Food Truck MG Road, Bangalore" [ref=f1e436] [cursor=pointer]:
+            - generic [ref=f1e437]:
+              - generic [ref=f1e439]: 7 min queue
+              - generic [ref=f1e441]: ON THE ROAD
+            - generic [ref=f1e443]:
+              - generic [ref=f1e444]:
+                - generic [ref=f1e445]: Biryani Junction
+                - generic [ref=f1e446]: ★ 4.9
+              - generic [ref=f1e447]: Hyderabadi Biryani · Food Truck
+              - generic [ref=f1e448]:
+                - img [ref=f1e449]
+                - generic [ref=f1e451]: MG Road, Bangalore
+          - button "14 min queue ON THE ROAD Tikka Junction ★ 4.8 North Indian Tandoor · Food Truck Indiranagar, Bangalore" [ref=f1e452] [cursor=pointer]:
+            - generic [ref=f1e453]:
+              - generic [ref=f1e455]: 14 min queue
+              - generic [ref=f1e457]: ON THE ROAD
+            - generic [ref=f1e459]:
+              - generic [ref=f1e460]:
+                - generic [ref=f1e461]: Tikka Junction
+                - generic [ref=f1e462]: ★ 4.8
+              - generic [ref=f1e463]: North Indian Tandoor · Food Truck
+              - generic [ref=f1e464]:
+                - img [ref=f1e465]
+                - generic [ref=f1e467]: Indiranagar, Bangalore
+          - button "16 min queue ON THE ROAD Punjab Express ★ 4.8 Butter Chicken & Naan · Food Truck HSR Layout, Bangalore" [ref=f1e468] [cursor=pointer]:
+            - generic [ref=f1e469]:
+              - generic [ref=f1e471]: 16 min queue
+              - generic [ref=f1e473]: ON THE ROAD
+            - generic [ref=f1e475]:
+              - generic [ref=f1e476]:
+                - generic [ref=f1e477]: Punjab Express
+                - generic [ref=f1e478]: ★ 4.8
+              - generic [ref=f1e479]: Butter Chicken & Naan · Food Truck
+              - generic [ref=f1e480]:
+                - img [ref=f1e481]
+                - generic [ref=f1e483]: HSR Layout, Bangalore
+          - button "9 min queue ON THE ROAD Chaat Chariot ★ 4.7 Delhi Street Chaat · Food Cart Karol Bagh, New Delhi" [ref=f1e484] [cursor=pointer]:
+            - generic [ref=f1e485]:
+              - generic [ref=f1e487]: 9 min queue
+              - generic [ref=f1e489]: ON THE ROAD
+            - generic [ref=f1e491]:
+              - generic [ref=f1e492]:
+                - generic [ref=f1e493]: Chaat Chariot
+                - generic [ref=f1e494]: ★ 4.7
+              - generic [ref=f1e495]: Delhi Street Chaat · Food Cart
+              - generic [ref=f1e496]:
+                - img [ref=f1e497]
+                - generic [ref=f1e499]: Karol Bagh, New Delhi
+          - button "13 min queue ON THE ROAD Lucknowi Handi ★ 4.9 Awadhi Curries · Food Truck Frazer Town, Bangalore" [ref=f1e500] [cursor=pointer]:
+            - generic [ref=f1e501]:
+              - generic [ref=f1e503]: 13 min queue
+              - generic [ref=f1e505]: ON THE ROAD
+            - generic [ref=f1e507]:
+              - generic [ref=f1e508]:
+                - generic [ref=f1e509]: Lucknowi Handi
+                - generic [ref=f1e510]: ★ 4.9
+              - generic [ref=f1e511]: Awadhi Curries · Food Truck
+              - generic [ref=f1e512]:
+                - img [ref=f1e513]
+                - generic [ref=f1e515]: Frazer Town, Bangalore
+          - button "18 min queue ON THE ROAD Dosa Diaries ★ 4.6 South Indian · Food Truck Jayanagar, Bangalore" [ref=f1e516] [cursor=pointer]:
+            - generic [ref=f1e517]:
+              - generic [ref=f1e519]: 18 min queue
+              - generic [ref=f1e521]: ON THE ROAD
+            - generic [ref=f1e523]:
+              - generic [ref=f1e524]:
+                - generic [ref=f1e525]: Dosa Diaries
+                - generic [ref=f1e526]: ★ 4.6
+              - generic [ref=f1e527]: South Indian · Food Truck
+              - generic [ref=f1e528]:
+                - img [ref=f1e529]
+                - generic [ref=f1e531]: Jayanagar, Bangalore
+          - button "5 min queue ON THE ROAD Chai Tapri ★ 4.6 Cutting Chai & Snacks · Street Cart Church Street, Bangalore" [ref=f1e532] [cursor=pointer]:
+            - generic [ref=f1e533]:
+              - generic [ref=f1e535]: 5 min queue
+              - generic [ref=f1e537]: ON THE ROAD
+            - generic [ref=f1e539]:
+              - generic [ref=f1e540]:
+                - generic [ref=f1e541]: Chai Tapri
+                - generic [ref=f1e542]: ★ 4.6
+              - generic [ref=f1e543]: Cutting Chai & Snacks · Street Cart
+              - generic [ref=f1e544]:
+                - img [ref=f1e545]
+                - generic [ref=f1e547]: Church Street, Bangalore
+          - button "11 min queue ON THE ROAD Curry & Co. ★ 4.7 Home-style Curries · Street Cart Koramangala, Bangalore" [ref=f1e548] [cursor=pointer]:
+            - generic [ref=f1e549]:
+              - generic [ref=f1e551]: 11 min queue
+              - generic [ref=f1e553]: ON THE ROAD
+            - generic [ref=f1e555]:
+              - generic [ref=f1e556]:
+                - generic [ref=f1e557]: Curry & Co.
+                - generic [ref=f1e558]: ★ 4.7
+              - generic [ref=f1e559]: Home-style Curries · Street Cart
+              - generic [ref=f1e560]:
+                - img [ref=f1e561]
+                - generic [ref=f1e563]: Koramangala, Bangalore
+      - generic [ref=f1e564]:
+        - generic [ref=f1e565]:
+          - generic [ref=f1e566]: All food trucks
+          - generic [ref=f1e567]: 8 LIVE
+        - generic [ref=f1e568]: Every truck on the road near you, right now
+        - generic [ref=f1e569]:
+          - button "LIVE Biryani Junction ★ 4.9 Hyderabadi Biryani · Food Truck 7 min queue MG Road, Bangalore" [ref=f1e570] [cursor=pointer]:
+            - generic [ref=f1e575]: LIVE
+            - generic [ref=f1e576]:
+              - generic [ref=f1e577]:
+                - generic [ref=f1e578]: Biryani Junction
+                - generic [ref=f1e579]: ★ 4.9
+              - generic [ref=f1e580]: Hyderabadi Biryani · Food Truck
+              - generic [ref=f1e581]:
+                - generic [ref=f1e582]: 7 min queue
+                - generic [ref=f1e584]:
+                  - img [ref=f1e585]
+                  - generic [ref=f1e587]: MG Road, Bangalore
+            - img [ref=f1e588]
+          - button "LIVE Tikka Junction ★ 4.8 North Indian Tandoor · Food Truck 14 min queue Indiranagar, Bangalore" [ref=f1e590] [cursor=pointer]:
+            - generic [ref=f1e595]: LIVE
+            - generic [ref=f1e596]:
+              - generic [ref=f1e597]:
+                - generic [ref=f1e598]: Tikka Junction
+                - generic [ref=f1e599]: ★ 4.8
+              - generic [ref=f1e600]: North Indian Tandoor · Food Truck
+              - generic [ref=f1e601]:
+                - generic [ref=f1e602]: 14 min queue
+                - generic [ref=f1e604]:
+                  - img [ref=f1e605]
+                  - generic [ref=f1e607]: Indiranagar, Bangalore
+            - img [ref=f1e608]
+          - button "LIVE Punjab Express ★ 4.8 Butter Chicken & Naan · Food Truck 16 min queue HSR Layout, Bangalore" [ref=f1e610] [cursor=pointer]:
+            - generic [ref=f1e615]: LIVE
+            - generic [ref=f1e616]:
+              - generic [ref=f1e617]:
+                - generic [ref=f1e618]: Punjab Express
+                - generic [ref=f1e619]: ★ 4.8
+              - generic [ref=f1e620]: Butter Chicken & Naan · Food Truck
+              - generic [ref=f1e621]:
+                - generic [ref=f1e622]: 16 min queue
+                - generic [ref=f1e624]:
+                  - img [ref=f1e625]
+                  - generic [ref=f1e627]: HSR Layout, Bangalore
+            - img [ref=f1e628]
+          - button "LIVE Chaat Chariot ★ 4.7 Delhi Street Chaat · Food Cart 9 min queue Karol Bagh, New Delhi" [ref=f1e630] [cursor=pointer]:
+            - generic [ref=f1e635]: LIVE
+            - generic [ref=f1e636]:
+              - generic [ref=f1e637]:
+                - generic [ref=f1e638]: Chaat Chariot
+                - generic [ref=f1e639]: ★ 4.7
+              - generic [ref=f1e640]: Delhi Street Chaat · Food Cart
+              - generic [ref=f1e641]:
+                - generic [ref=f1e642]: 9 min queue
+                - generic [ref=f1e644]:
+                  - img [ref=f1e645]
+                  - generic [ref=f1e647]: Karol Bagh, New Delhi
+            - img [ref=f1e648]
+          - button "LIVE Lucknowi Handi ★ 4.9 Awadhi Curries · Food Truck 13 min queue Frazer Town, Bangalore" [ref=f1e650] [cursor=pointer]:
+            - generic [ref=f1e655]: LIVE
+            - generic [ref=f1e656]:
+              - generic [ref=f1e657]:
+                - generic [ref=f1e658]: Lucknowi Handi
+                - generic [ref=f1e659]: ★ 4.9
+              - generic [ref=f1e660]: Awadhi Curries · Food Truck
+              - generic [ref=f1e661]:
+                - generic [ref=f1e662]: 13 min queue
+                - generic [ref=f1e664]:
+                  - img [ref=f1e665]
+                  - generic [ref=f1e667]: Frazer Town, Bangalore
+            - img [ref=f1e668]
+          - button "LIVE Dosa Diaries ★ 4.6 South Indian · Food Truck 18 min queue Jayanagar, Bangalore" [ref=f1e670] [cursor=pointer]:
+            - generic [ref=f1e675]: LIVE
+            - generic [ref=f1e676]:
+              - generic [ref=f1e677]:
+                - generic [ref=f1e678]: Dosa Diaries
+                - generic [ref=f1e679]: ★ 4.6
+              - generic [ref=f1e680]: South Indian · Food Truck
+              - generic [ref=f1e681]:
+                - generic [ref=f1e682]: 18 min queue
+                - generic [ref=f1e684]:
+                  - img [ref=f1e685]
+                  - generic [ref=f1e687]: Jayanagar, Bangalore
+            - img [ref=f1e688]
+          - button "LIVE Chai Tapri ★ 4.6 Cutting Chai & Snacks · Street Cart 5 min queue Church Street, Bangalore" [ref=f1e690] [cursor=pointer]:
+            - generic [ref=f1e695]: LIVE
+            - generic [ref=f1e696]:
+              - generic [ref=f1e697]:
+                - generic [ref=f1e698]: Chai Tapri
+                - generic [ref=f1e699]: ★ 4.6
+              - generic [ref=f1e700]: Cutting Chai & Snacks · Street Cart
+              - generic [ref=f1e701]:
+                - generic [ref=f1e702]: 5 min queue
+                - generic [ref=f1e704]:
+                  - img [ref=f1e705]
+                  - generic [ref=f1e707]: Church Street, Bangalore
+            - img [ref=f1e708]
+          - button "LIVE Curry & Co. ★ 4.7 Home-style Curries · Street Cart 11 min queue Koramangala, Bangalore" [ref=f1e710] [cursor=pointer]:
+            - generic [ref=f1e715]: LIVE
+            - generic [ref=f1e716]:
+              - generic [ref=f1e717]:
+                - generic [ref=f1e718]: Curry & Co.
+                - generic [ref=f1e719]: ★ 4.7
+              - generic [ref=f1e720]: Home-style Curries · Street Cart
+              - generic [ref=f1e721]:
+                - generic [ref=f1e722]: 11 min queue
+                - generic [ref=f1e724]:
+                  - img [ref=f1e725]
+                  - generic [ref=f1e727]: Koramangala, Bangalore
+            - img [ref=f1e728]
+    - dialog [ref=f1e22]:
+      - generic [ref=f1e24]:
+        - img [ref=f1e26]
+        - generic [ref=f1e28]: Join the queue?
+        - generic [ref=f1e29]: You'll get a live token and a heads-up when it's almost your turn.
+        - generic [ref=f1e30]:
+          - button [ref=f1e31] [cursor=pointer]: "No"
+          - button [ref=f1e32] [cursor=pointer]:
+            - text: Confirm & join
+            - generic [ref=f1e33]: →
+    - dialog [ref=f1e34]:
+      - generic [ref=f1e36]:
+        - generic [ref=f1e37]:
+          - generic [ref=f1e40]: Park your order
+          - generic [ref=f1e41]: Skip the wait — pick a pickup time and we'll start cooking so it's fresh when you arrive.
+        - button [ref=f1e42] [cursor=pointer]:
+          - img [ref=f1e43]
+      - generic [ref=f1e45]:
+        - img [ref=f1e46]
+        - generic [ref=f1e48]: Your cart is empty — add items from the menu first.
+      - generic [ref=f1e49]:
+        - button [ref=f1e50] [cursor=pointer]: Today
+        - button [ref=f1e51] [cursor=pointer]: Tomorrow
+      - generic [ref=f1e52]:
+        - generic [ref=f1e53]: Pickup window
+        - generic [ref=f1e54]:
+          - generic [ref=f1e55]:
+            - generic [ref=f1e58]: 11:00 AM – 11:15 AM
+            - generic [ref=f1e59]: Full
+          - generic [ref=f1e60]:
+            - generic [ref=f1e63]: 11:15 AM – 11:30 AM
+            - generic [ref=f1e64]: Full
+          - generic [ref=f1e65]:
+            - generic [ref=f1e68]: 11:30 AM – 11:45 AM
+            - generic [ref=f1e69]: Full
+          - generic [ref=f1e70]:
+            - generic [ref=f1e73]: 11:45 AM – 12:00 PM
+            - generic [ref=f1e74]: Full
+          - generic [ref=f1e75]:
+            - generic [ref=f1e78]: 12:00 PM – 12:15 PM
+            - generic [ref=f1e79]: Full
+          - button [ref=f1e80] [cursor=pointer]:
+            - generic [ref=f1e83]: 12:15 PM – 12:30 PM
+            - generic [ref=f1e84]: Few left
+          - generic [ref=f1e85]:
+            - generic [ref=f1e88]: 12:30 PM – 12:45 PM
+            - generic [ref=f1e89]: Full
+          - button [ref=f1e90] [cursor=pointer]:
+            - generic [ref=f1e93]: 12:45 PM – 1:00 PM
+          - button [ref=f1e94] [cursor=pointer]:
+            - generic [ref=f1e97]: 1:00 PM – 1:15 PM
+            - generic [ref=f1e98]: Few left
+          - button [ref=f1e99] [cursor=pointer]:
+            - generic [ref=f1e102]: 1:15 PM – 1:30 PM
+          - button [ref=f1e103] [cursor=pointer]:
+            - generic [ref=f1e106]: 1:30 PM – 1:45 PM
+          - button [ref=f1e107] [cursor=pointer]:
+            - generic [ref=f1e110]: 1:45 PM – 2:00 PM
+            - generic [ref=f1e111]: Few left
+          - button [ref=f1e112] [cursor=pointer]:
+            - generic [ref=f1e115]: 2:00 PM – 2:15 PM
+          - generic [ref=f1e116]:
+            - generic [ref=f1e119]: 2:15 PM – 2:30 PM
+            - generic [ref=f1e120]: Full
+          - button [ref=f1e121] [cursor=pointer]:
+            - generic [ref=f1e124]: 2:30 PM – 2:45 PM
+            - generic [ref=f1e125]: Few left
+          - button [ref=f1e126] [cursor=pointer]:
+            - generic [ref=f1e129]: 2:45 PM – 3:00 PM
+          - button [ref=f1e130] [cursor=pointer]:
+            - generic [ref=f1e133]: 3:00 PM – 3:15 PM
+          - button [ref=f1e134] [cursor=pointer]:
+            - generic [ref=f1e137]: 3:15 PM – 3:30 PM
+            - generic [ref=f1e138]: Few left
+          - button [ref=f1e139] [cursor=pointer]:
+            - generic [ref=f1e142]: 3:30 PM – 3:45 PM
+          - button [ref=f1e143] [cursor=pointer]:
+            - generic [ref=f1e146]: 3:45 PM – 4:00 PM
+          - generic [ref=f1e147]:
+            - generic [ref=f1e150]: 4:00 PM – 4:15 PM
+            - generic [ref=f1e151]: Full
+          - button [ref=f1e152] [cursor=pointer]:
+            - generic [ref=f1e155]: 4:15 PM – 4:30 PM
+          - button [ref=f1e156] [cursor=pointer]:
+            - generic [ref=f1e159]: 4:30 PM – 4:45 PM
+          - button [ref=f1e160] [cursor=pointer]:
+            - generic [ref=f1e163]: 4:45 PM – 5:00 PM
+            - generic [ref=f1e164]: Few left
+          - button [ref=f1e165] [cursor=pointer]:
+            - generic [ref=f1e168]: 5:00 PM – 5:15 PM
+          - button [ref=f1e169] [cursor=pointer]:
+            - generic [ref=f1e172]: 5:15 PM – 5:30 PM
+          - button [ref=f1e173] [cursor=pointer]:
+            - generic [ref=f1e176]: 5:30 PM – 5:45 PM
+            - generic [ref=f1e177]: Few left
+          - generic [ref=f1e178]:
+            - generic [ref=f1e181]: 5:45 PM – 6:00 PM
+            - generic [ref=f1e182]: Full
+          - button [ref=f1e183] [cursor=pointer]:
+            - generic [ref=f1e186]: 6:00 PM – 6:15 PM
+          - button [ref=f1e187] [cursor=pointer]:
+            - generic [ref=f1e190]: 6:15 PM – 6:30 PM
+            - generic [ref=f1e191]: Few left
+          - button [ref=f1e192] [cursor=pointer]:
+            - generic [ref=f1e195]: 6:30 PM – 6:45 PM
+          - button [ref=f1e196] [cursor=pointer]:
+            - generic [ref=f1e199]: 6:45 PM – 7:00 PM
+          - button [ref=f1e200] [cursor=pointer]:
+            - generic [ref=f1e203]: 7:00 PM – 7:15 PM
+            - generic [ref=f1e204]: Few left
+          - button [ref=f1e205] [cursor=pointer]:
+            - generic [ref=f1e208]: 7:15 PM – 7:30 PM
+          - generic [ref=f1e209]:
+            - generic [ref=f1e212]: 7:30 PM – 7:45 PM
+            - generic [ref=f1e213]: Full
+          - button [ref=f1e214] [cursor=pointer]:
+            - generic [ref=f1e217]: 7:45 PM – 8:00 PM
+            - generic [ref=f1e218]: Few left
+          - button [ref=f1e219] [cursor=pointer]:
+            - generic [ref=f1e222]: 8:00 PM – 8:15 PM
+          - button [ref=f1e223] [cursor=pointer]:
+            - generic [ref=f1e226]: 8:15 PM – 8:30 PM
+          - button [ref=f1e227] [cursor=pointer]:
+            - generic [ref=f1e230]: 8:30 PM – 8:45 PM
+            - generic [ref=f1e231]: Few left
+          - button [ref=f1e232] [cursor=pointer]:
+            - generic [ref=f1e235]: 8:45 PM – 9:00 PM
+          - button [ref=f1e236] [cursor=pointer]:
+            - generic [ref=f1e239]: 9:00 PM – 9:15 PM
+          - generic [ref=f1e240]:
+            - generic [ref=f1e243]: 9:15 PM – 9:30 PM
+            - generic [ref=f1e244]: Full
+          - button [ref=f1e245] [cursor=pointer]:
+            - generic [ref=f1e248]: 9:30 PM – 9:45 PM
+          - button [ref=f1e249] [cursor=pointer]:
+            - generic [ref=f1e252]: 9:45 PM – 10:00 PM
+      - generic [ref=f1e253]:
+        - button [disabled] [ref=f1e254] [cursor=pointer]:
+          - text: Select a time
+          - generic [ref=f1e255]: →
+        - button [ref=f1e256] [cursor=pointer]: Join the live queue instead
+    - dialog [ref=f1e257]:
+      - generic [ref=f1e258]:
+        - button [ref=f1e260] [cursor=pointer]:
+          - img [ref=f1e261]
+        - generic [ref=f1e263]:
+          - generic [ref=f1e264]: Extra savings with
+          - generic [ref=f1e265]:
+            - img [ref=f1e267]
+            - generic [ref=f1e269]: RasaCoins
+          - generic [ref=f1e270]: on every dining transaction
+          - generic [ref=f1e271]: 1 RasaCoin = ₹1
+        - generic [ref=f1e272]: How it works
+        - generic [ref=f1e273]:
+          - generic [ref=f1e274]:
+            - generic [ref=f1e275]: "1"
+            - generic [ref=f1e276]: Pay your dining bill using Rasa
+          - generic [ref=f1e277]:
+            - generic [ref=f1e278]: "2"
+            - generic [ref=f1e279]: Get 20% cashback as RasaCoins after payment — valid till 14 days after payment
+          - generic [ref=f1e280]:
+            - generic [ref=f1e281]: "3"
+            - generic [ref=f1e282]: Use RasaCoins to save an extra 25% on your next bill — no minimum bill value
+        - button [ref=f1e283] [cursor=pointer]: Got it
+    - dialog [ref=f1e284]:
+      - generic [ref=f1e285]:
+        - generic [ref=f1e286]:
+          - generic [ref=f1e287]: Have a coupon?
+          - button [ref=f1e288] [cursor=pointer]:
+            - img [ref=f1e289]
+        - generic [ref=f1e291]: Enter a coupon code to avail discounts
+        - textbox [ref=f1e292]:
+          - /placeholder: Enter coupon code
+        - button [ref=f1e293] [cursor=pointer]: Apply coupon

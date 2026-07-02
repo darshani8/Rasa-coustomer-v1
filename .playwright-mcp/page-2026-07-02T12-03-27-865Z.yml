@@ -1,0 +1,236 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - button "R Rasa" [ref=e5] [cursor=pointer]:
+      - generic [ref=e6]: R
+      - generic [ref=e7]: Rasa
+    - generic [ref=e8]:
+      - button "Home" [ref=e9] [cursor=pointer]
+      - button "Search" [ref=e10] [cursor=pointer]
+      - button "Orders" [ref=e11] [cursor=pointer]
+      - button "Queue" [ref=e12] [cursor=pointer]
+      - button "Profile" [ref=e13] [cursor=pointer]
+    - button "Profile" [ref=e14] [cursor=pointer]:
+      - img [ref=e15]
+  - generic [ref=e18]:
+    - generic [ref=e730]:
+      - generic [ref=e731]:
+        - button "Back" [ref=e732] [cursor=pointer]:
+          - img [ref=e733]
+        - generic [ref=e735]:
+          - generic [ref=e736]: VV Puram Food Street
+          - generic [ref=e737]: Street food vendors on VV Puram Food Street
+      - generic [ref=e738]:
+        - button "All" [ref=e739] [cursor=pointer]
+        - button "Chaat" [ref=e740] [cursor=pointer]
+        - button "Dosa" [ref=e741] [cursor=pointer]
+      - generic [ref=e742]:
+        - button "9 min queue ON THE ROAD Chaat Chariot ★ 4.7 Delhi Street Chaat · Food Cart Karol Bagh, New Delhi" [ref=e743] [cursor=pointer]:
+          - generic [ref=e744]:
+            - generic [ref=e746]: 9 min queue
+            - generic [ref=e748]: ON THE ROAD
+          - generic [ref=e750]:
+            - generic [ref=e751]:
+              - generic [ref=e752]: Chaat Chariot
+              - generic [ref=e753]: ★ 4.7
+            - generic [ref=e754]: Delhi Street Chaat · Food Cart
+            - generic [ref=e755]:
+              - img [ref=e756]
+              - generic [ref=e759]: Karol Bagh, New Delhi
+        - button "18 min queue ON THE ROAD Dosa Diaries ★ 4.6 South Indian · Food Truck Jayanagar, Bangalore" [ref=e760] [cursor=pointer]:
+          - generic [ref=e761]:
+            - generic [ref=e763]: 18 min queue
+            - generic [ref=e765]: ON THE ROAD
+          - generic [ref=e767]:
+            - generic [ref=e768]:
+              - generic [ref=e769]: Dosa Diaries
+              - generic [ref=e770]: ★ 4.6
+            - generic [ref=e771]: South Indian · Food Truck
+            - generic [ref=e772]:
+              - img [ref=e773]
+              - generic [ref=e776]: Jayanagar, Bangalore
+        - button "5 min queue ON THE ROAD Chai Tapri ★ 4.6 Cutting Chai & Snacks · Street Cart Church Street, Bangalore" [ref=e777] [cursor=pointer]:
+          - generic [ref=e778]:
+            - generic [ref=e780]: 5 min queue
+            - generic [ref=e782]: ON THE ROAD
+          - generic [ref=e784]:
+            - generic [ref=e785]:
+              - generic [ref=e786]: Chai Tapri
+              - generic [ref=e787]: ★ 4.6
+            - generic [ref=e788]: Cutting Chai & Snacks · Street Cart
+            - generic [ref=e789]:
+              - img [ref=e790]
+              - generic [ref=e793]: Church Street, Bangalore
+    - dialog [ref=e22]:
+      - generic [ref=e24]:
+        - img [ref=e26]
+        - generic [ref=e28]: Join the queue?
+        - generic [ref=e29]: You'll get a live token and a heads-up when it's almost your turn.
+        - generic [ref=e30]:
+          - button [ref=e31] [cursor=pointer]: "No"
+          - button [ref=e32] [cursor=pointer]:
+            - text: Confirm & join
+            - generic [ref=e33]: →
+    - dialog [ref=e34]:
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e40]: Park your order
+          - generic [ref=e41]: Skip the wait — pick a pickup time and we'll start cooking so it's fresh when you arrive.
+        - button [ref=e42] [cursor=pointer]:
+          - img [ref=e43]
+      - generic [ref=e45]:
+        - img [ref=e46]
+        - generic [ref=e48]: Your cart is empty — add items from the menu first.
+      - generic [ref=e49]:
+        - button [ref=e50] [cursor=pointer]: Today
+        - button [ref=e51] [cursor=pointer]: Tomorrow
+      - generic [ref=e52]:
+        - generic [ref=e53]: Pickup window
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - generic [ref=e58]: 11:00 AM – 11:15 AM
+            - generic [ref=e59]: Full
+          - generic [ref=e60]:
+            - generic [ref=e63]: 11:15 AM – 11:30 AM
+            - generic [ref=e64]: Full
+          - generic [ref=e65]:
+            - generic [ref=e68]: 11:30 AM – 11:45 AM
+            - generic [ref=e69]: Full
+          - generic [ref=e70]:
+            - generic [ref=e73]: 11:45 AM – 12:00 PM
+            - generic [ref=e74]: Full
+          - generic [ref=e75]:
+            - generic [ref=e78]: 12:00 PM – 12:15 PM
+            - generic [ref=e79]: Full
+          - button [ref=e80] [cursor=pointer]:
+            - generic [ref=e83]: 12:15 PM – 12:30 PM
+            - generic [ref=e84]: Few left
+          - generic [ref=e85]:
+            - generic [ref=e88]: 12:30 PM – 12:45 PM
+            - generic [ref=e89]: Full
+          - button [ref=e90] [cursor=pointer]:
+            - generic [ref=e93]: 12:45 PM – 1:00 PM
+          - button [ref=e94] [cursor=pointer]:
+            - generic [ref=e97]: 1:00 PM – 1:15 PM
+            - generic [ref=e98]: Few left
+          - button [ref=e99] [cursor=pointer]:
+            - generic [ref=e102]: 1:15 PM – 1:30 PM
+          - button [ref=e103] [cursor=pointer]:
+            - generic [ref=e106]: 1:30 PM – 1:45 PM
+          - button [ref=e107] [cursor=pointer]:
+            - generic [ref=e110]: 1:45 PM – 2:00 PM
+            - generic [ref=e111]: Few left
+          - button [ref=e112] [cursor=pointer]:
+            - generic [ref=e115]: 2:00 PM – 2:15 PM
+          - generic [ref=e116]:
+            - generic [ref=e119]: 2:15 PM – 2:30 PM
+            - generic [ref=e120]: Full
+          - button [ref=e121] [cursor=pointer]:
+            - generic [ref=e124]: 2:30 PM – 2:45 PM
+            - generic [ref=e125]: Few left
+          - button [ref=e126] [cursor=pointer]:
+            - generic [ref=e129]: 2:45 PM – 3:00 PM
+          - button [ref=e130] [cursor=pointer]:
+            - generic [ref=e133]: 3:00 PM – 3:15 PM
+          - button [ref=e134] [cursor=pointer]:
+            - generic [ref=e137]: 3:15 PM – 3:30 PM
+            - generic [ref=e138]: Few left
+          - button [ref=e139] [cursor=pointer]:
+            - generic [ref=e142]: 3:30 PM – 3:45 PM
+          - button [ref=e143] [cursor=pointer]:
+            - generic [ref=e146]: 3:45 PM – 4:00 PM
+          - generic [ref=e147]:
+            - generic [ref=e150]: 4:00 PM – 4:15 PM
+            - generic [ref=e151]: Full
+          - button [ref=e152] [cursor=pointer]:
+            - generic [ref=e155]: 4:15 PM – 4:30 PM
+          - button [ref=e156] [cursor=pointer]:
+            - generic [ref=e159]: 4:30 PM – 4:45 PM
+          - button [ref=e160] [cursor=pointer]:
+            - generic [ref=e163]: 4:45 PM – 5:00 PM
+            - generic [ref=e164]: Few left
+          - button [ref=e165] [cursor=pointer]:
+            - generic [ref=e168]: 5:00 PM – 5:15 PM
+          - button [ref=e169] [cursor=pointer]:
+            - generic [ref=e172]: 5:15 PM – 5:30 PM
+          - button [ref=e173] [cursor=pointer]:
+            - generic [ref=e176]: 5:30 PM – 5:45 PM
+            - generic [ref=e177]: Few left
+          - generic [ref=e178]:
+            - generic [ref=e181]: 5:45 PM – 6:00 PM
+            - generic [ref=e182]: Full
+          - button [ref=e183] [cursor=pointer]:
+            - generic [ref=e186]: 6:00 PM – 6:15 PM
+          - button [ref=e187] [cursor=pointer]:
+            - generic [ref=e190]: 6:15 PM – 6:30 PM
+            - generic [ref=e191]: Few left
+          - button [ref=e192] [cursor=pointer]:
+            - generic [ref=e195]: 6:30 PM – 6:45 PM
+          - button [ref=e196] [cursor=pointer]:
+            - generic [ref=e199]: 6:45 PM – 7:00 PM
+          - button [ref=e200] [cursor=pointer]:
+            - generic [ref=e203]: 7:00 PM – 7:15 PM
+            - generic [ref=e204]: Few left
+          - button [ref=e205] [cursor=pointer]:
+            - generic [ref=e208]: 7:15 PM – 7:30 PM
+          - generic [ref=e209]:
+            - generic [ref=e212]: 7:30 PM – 7:45 PM
+            - generic [ref=e213]: Full
+          - button [ref=e214] [cursor=pointer]:
+            - generic [ref=e217]: 7:45 PM – 8:00 PM
+            - generic [ref=e218]: Few left
+          - button [ref=e219] [cursor=pointer]:
+            - generic [ref=e222]: 8:00 PM – 8:15 PM
+          - button [ref=e223] [cursor=pointer]:
+            - generic [ref=e226]: 8:15 PM – 8:30 PM
+          - button [ref=e227] [cursor=pointer]:
+            - generic [ref=e230]: 8:30 PM – 8:45 PM
+            - generic [ref=e231]: Few left
+          - button [ref=e232] [cursor=pointer]:
+            - generic [ref=e235]: 8:45 PM – 9:00 PM
+          - button [ref=e236] [cursor=pointer]:
+            - generic [ref=e239]: 9:00 PM – 9:15 PM
+          - generic [ref=e240]:
+            - generic [ref=e243]: 9:15 PM – 9:30 PM
+            - generic [ref=e244]: Full
+          - button [ref=e245] [cursor=pointer]:
+            - generic [ref=e248]: 9:30 PM – 9:45 PM
+          - button [ref=e249] [cursor=pointer]:
+            - generic [ref=e252]: 9:45 PM – 10:00 PM
+      - generic [ref=e253]:
+        - button [disabled] [ref=e254] [cursor=pointer]:
+          - text: Select a time
+          - generic [ref=e255]: →
+        - button [ref=e256] [cursor=pointer]: Join the live queue instead
+    - dialog [ref=e257]:
+      - generic [ref=e258]:
+        - button [ref=e260] [cursor=pointer]:
+          - img [ref=e261]
+        - generic [ref=e263]:
+          - generic [ref=e264]: Extra savings with
+          - generic [ref=e265]:
+            - img [ref=e267]
+            - generic [ref=e269]: RasaCoins
+          - generic [ref=e270]: on every dining transaction
+          - generic [ref=e271]: 1 RasaCoin = ₹1
+        - generic [ref=e272]: How it works
+        - generic [ref=e273]:
+          - generic [ref=e274]:
+            - generic [ref=e275]: "1"
+            - generic [ref=e276]: Pay your dining bill using Rasa
+          - generic [ref=e277]:
+            - generic [ref=e278]: "2"
+            - generic [ref=e279]: Get 20% cashback as RasaCoins after payment — valid till 14 days after payment
+          - generic [ref=e280]:
+            - generic [ref=e281]: "3"
+            - generic [ref=e282]: Use RasaCoins to save an extra 25% on your next bill — no minimum bill value
+        - button [ref=e283] [cursor=pointer]: Got it
+    - dialog [ref=e284]:
+      - generic [ref=e285]:
+        - generic [ref=e286]:
+          - generic [ref=e287]: Have a coupon?
+          - button [ref=e288] [cursor=pointer]:
+            - img [ref=e289]
+        - generic [ref=e291]: Enter a coupon code to avail discounts
+        - textbox [ref=e292]:
+          - /placeholder: Enter coupon code
+        - button [ref=e293] [cursor=pointer]: Apply coupon

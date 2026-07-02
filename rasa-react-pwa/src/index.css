@@ -56,11 +56,13 @@
   --queue-combo-w: clamp(132px, 42vw, 190px);
   --modal-max-w: min(90vw, 480px);
   --nav-h: 0px;
+  --vendor-banner-h: 180px;
 }
 
 /* Tablet */
 @media (min-width: 640px) {
   :root {
+    --app-max-w: 680px;
     --hero-max-w: 340px;
     --feature-w: clamp(260px, 42vw, 300px);
     --street-w: clamp(140px, 24vw, 180px);
@@ -73,6 +75,9 @@
 /* Desktop */
 @media (min-width: 1024px) {
   :root {
+    --app-max-w: 900px;
+    --app-radius: 18px;
+    --app-shadow: 0 12px 48px rgba(0, 0, 0, .08);
     --hero-max-w: 420px;
     --feature-w: clamp(270px, 28vw, 330px);
     --street-w: clamp(150px, 18vw, 200px);
@@ -80,6 +85,7 @@
     --queue-add-w: clamp(180px, 22vw, 230px);
     --queue-combo-w: clamp(170px, 20vw, 220px);
     --nav-h: 56px;
+    --vendor-banner-h: clamp(150px, 18vw, 180px);
   }
 }
 
@@ -138,17 +144,21 @@ img { display: block; max-width: 100%; }
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  background: var(--bg);
+  background: var(--desk);
 }
 .app-col {
   position: relative;
   width: 100%;
+  max-width: var(--app-max-w);
   min-height: calc(100vh - var(--nav-h));
   min-height: calc(100dvh - var(--nav-h));
+  margin-inline: auto;
   background: var(--bg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -160,6 +170,8 @@ img { display: block; max-width: 100%; }
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    max-width: var(--app-max-w);
+    margin-inline: auto;
     padding: 0 28px;
     height: var(--nav-h);
     background: #fff;

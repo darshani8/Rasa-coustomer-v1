@@ -87,7 +87,7 @@ export default function Vendor() {
       </div>
 
       {/* banner */}
-      <div style={s('position:relative;height:180px;margin-top:-1px;overflow:hidden;background:#EEE9E0')}>
+      <div style={s('position:relative;height:var(--vendor-banner-h,180px);margin-top:-1px;overflow:hidden;background:#EEE9E0')}>
         <div style={s('position:absolute;inset:0;background:#EEE9E0 center/cover no-repeat;background-image:url(' + v.banner + ');animation:rasaZoom 15s ease-in-out infinite alternate')} />
         <div style={s('position:absolute;top:0;bottom:0;left:0;width:36%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);animation:rasaShine 7.5s ease-in-out infinite;pointer-events:none')} />
         <div style={s('position:absolute;inset:0;background:linear-gradient(to top,rgba(251,250,247,1),rgba(251,250,247,0) 60%);pointer-events:none')} />

@@ -1,0 +1,176 @@
+- generic [ref=f3e4]:
+  - status "Loading" [ref=f3e6]
+  - dialog [ref=f3e8]:
+    - generic [ref=f3e10]:
+      - img [ref=f3e12]
+      - generic [ref=f3e14]: Join the queue?
+      - generic [ref=f3e15]: You'll get a live token and a heads-up when it's almost your turn.
+      - generic [ref=f3e16]:
+        - button [ref=f3e17] [cursor=pointer]: "No"
+        - button [ref=f3e18] [cursor=pointer]:
+          - text: Confirm & join
+          - generic [ref=f3e19]: →
+  - dialog [ref=f3e20]:
+    - generic [ref=f3e22]:
+      - generic [ref=f3e23]:
+        - generic [ref=f3e26]: Park your order
+        - generic [ref=f3e27]: Skip the wait — pick a pickup time and we'll start cooking so it's fresh when you arrive.
+      - button [ref=f3e28] [cursor=pointer]:
+        - img [ref=f3e29]
+    - generic [ref=f3e31]:
+      - img [ref=f3e32]
+      - generic [ref=f3e34]: Your cart is empty — add items from the menu first.
+    - generic [ref=f3e35]:
+      - button [ref=f3e36] [cursor=pointer]: Today
+      - button [ref=f3e37] [cursor=pointer]: Tomorrow
+    - generic [ref=f3e38]:
+      - generic [ref=f3e39]: Pickup window
+      - generic [ref=f3e40]:
+        - generic [ref=f3e41]:
+          - generic [ref=f3e44]: 11:00 AM – 11:15 AM
+          - generic [ref=f3e45]: Full
+        - generic [ref=f3e46]:
+          - generic [ref=f3e49]: 11:15 AM – 11:30 AM
+          - generic [ref=f3e50]: Full
+        - generic [ref=f3e51]:
+          - generic [ref=f3e54]: 11:30 AM – 11:45 AM
+          - generic [ref=f3e55]: Full
+        - generic [ref=f3e56]:
+          - generic [ref=f3e59]: 11:45 AM – 12:00 PM
+          - generic [ref=f3e60]: Full
+        - generic [ref=f3e61]:
+          - generic [ref=f3e64]: 12:00 PM – 12:15 PM
+          - generic [ref=f3e65]: Full
+        - button [ref=f3e66] [cursor=pointer]:
+          - generic [ref=f3e69]: 12:15 PM – 12:30 PM
+          - generic [ref=f3e70]: Few left
+        - generic [ref=f3e71]:
+          - generic [ref=f3e74]: 12:30 PM – 12:45 PM
+          - generic [ref=f3e75]: Full
+        - button [ref=f3e76] [cursor=pointer]:
+          - generic [ref=f3e79]: 12:45 PM – 1:00 PM
+        - button [ref=f3e80] [cursor=pointer]:
+          - generic [ref=f3e83]: 1:00 PM – 1:15 PM
+          - generic [ref=f3e84]: Few left
+        - button [ref=f3e85] [cursor=pointer]:
+          - generic [ref=f3e88]: 1:15 PM – 1:30 PM
+        - button [ref=f3e89] [cursor=pointer]:
+          - generic [ref=f3e92]: 1:30 PM – 1:45 PM
+        - button [ref=f3e93] [cursor=pointer]:
+          - generic [ref=f3e96]: 1:45 PM – 2:00 PM
+          - generic [ref=f3e97]: Few left
+        - button [ref=f3e98] [cursor=pointer]:
+          - generic [ref=f3e101]: 2:00 PM – 2:15 PM
+        - generic [ref=f3e102]:
+          - generic [ref=f3e105]: 2:15 PM – 2:30 PM
+          - generic [ref=f3e106]: Full
+        - button [ref=f3e107] [cursor=pointer]:
+          - generic [ref=f3e110]: 2:30 PM – 2:45 PM
+          - generic [ref=f3e111]: Few left
+        - button [ref=f3e112] [cursor=pointer]:
+          - generic [ref=f3e115]: 2:45 PM – 3:00 PM
+        - button [ref=f3e116] [cursor=pointer]:
+          - generic [ref=f3e119]: 3:00 PM – 3:15 PM
+        - button [ref=f3e120] [cursor=pointer]:
+          - generic [ref=f3e123]: 3:15 PM – 3:30 PM
+          - generic [ref=f3e124]: Few left
+        - button [ref=f3e125] [cursor=pointer]:
+          - generic [ref=f3e128]: 3:30 PM – 3:45 PM
+        - button [ref=f3e129] [cursor=pointer]:
+          - generic [ref=f3e132]: 3:45 PM – 4:00 PM
+        - generic [ref=f3e133]:
+          - generic [ref=f3e136]: 4:00 PM – 4:15 PM
+          - generic [ref=f3e137]: Full
+        - button [ref=f3e138] [cursor=pointer]:
+          - generic [ref=f3e141]: 4:15 PM – 4:30 PM
+        - button [ref=f3e142] [cursor=pointer]:
+          - generic [ref=f3e145]: 4:30 PM – 4:45 PM
+        - button [ref=f3e146] [cursor=pointer]:
+          - generic [ref=f3e149]: 4:45 PM – 5:00 PM
+          - generic [ref=f3e150]: Few left
+        - button [ref=f3e151] [cursor=pointer]:
+          - generic [ref=f3e154]: 5:00 PM – 5:15 PM
+        - button [ref=f3e155] [cursor=pointer]:
+          - generic [ref=f3e158]: 5:15 PM – 5:30 PM
+        - button [ref=f3e159] [cursor=pointer]:
+          - generic [ref=f3e162]: 5:30 PM – 5:45 PM
+          - generic [ref=f3e163]: Few left
+        - generic [ref=f3e164]:
+          - generic [ref=f3e167]: 5:45 PM – 6:00 PM
+          - generic [ref=f3e168]: Full
+        - button [ref=f3e169] [cursor=pointer]:
+          - generic [ref=f3e172]: 6:00 PM – 6:15 PM
+        - button [ref=f3e173] [cursor=pointer]:
+          - generic [ref=f3e176]: 6:15 PM – 6:30 PM
+          - generic [ref=f3e177]: Few left
+        - button [ref=f3e178] [cursor=pointer]:
+          - generic [ref=f3e181]: 6:30 PM – 6:45 PM
+        - button [ref=f3e182] [cursor=pointer]:
+          - generic [ref=f3e185]: 6:45 PM – 7:00 PM
+        - button [ref=f3e186] [cursor=pointer]:
+          - generic [ref=f3e189]: 7:00 PM – 7:15 PM
+          - generic [ref=f3e190]: Few left
+        - button [ref=f3e191] [cursor=pointer]:
+          - generic [ref=f3e194]: 7:15 PM – 7:30 PM
+        - generic [ref=f3e195]:
+          - generic [ref=f3e198]: 7:30 PM – 7:45 PM
+          - generic [ref=f3e199]: Full
+        - button [ref=f3e200] [cursor=pointer]:
+          - generic [ref=f3e203]: 7:45 PM – 8:00 PM
+          - generic [ref=f3e204]: Few left
+        - button [ref=f3e205] [cursor=pointer]:
+          - generic [ref=f3e208]: 8:00 PM – 8:15 PM
+        - button [ref=f3e209] [cursor=pointer]:
+          - generic [ref=f3e212]: 8:15 PM – 8:30 PM
+        - button [ref=f3e213] [cursor=pointer]:
+          - generic [ref=f3e216]: 8:30 PM – 8:45 PM
+          - generic [ref=f3e217]: Few left
+        - button [ref=f3e218] [cursor=pointer]:
+          - generic [ref=f3e221]: 8:45 PM – 9:00 PM
+        - button [ref=f3e222] [cursor=pointer]:
+          - generic [ref=f3e225]: 9:00 PM – 9:15 PM
+        - generic [ref=f3e226]:
+          - generic [ref=f3e229]: 9:15 PM – 9:30 PM
+          - generic [ref=f3e230]: Full
+        - button [ref=f3e231] [cursor=pointer]:
+          - generic [ref=f3e234]: 9:30 PM – 9:45 PM
+        - button [ref=f3e235] [cursor=pointer]:
+          - generic [ref=f3e238]: 9:45 PM – 10:00 PM
+    - generic [ref=f3e239]:
+      - button [disabled] [ref=f3e240] [cursor=pointer]:
+        - text: Select a time
+        - generic [ref=f3e241]: →
+      - button [ref=f3e242] [cursor=pointer]: Join the live queue instead
+  - dialog [ref=f3e243]:
+    - generic [ref=f3e244]:
+      - button [ref=f3e246] [cursor=pointer]:
+        - img [ref=f3e247]
+      - generic [ref=f3e249]:
+        - generic [ref=f3e250]: Extra savings with
+        - generic [ref=f3e251]:
+          - img [ref=f3e253]
+          - generic [ref=f3e255]: RasaCoins
+        - generic [ref=f3e256]: on every dining transaction
+        - generic [ref=f3e257]: 1 RasaCoin = ₹1
+      - generic [ref=f3e258]: How it works
+      - generic [ref=f3e259]:
+        - generic [ref=f3e260]:
+          - generic [ref=f3e261]: "1"
+          - generic [ref=f3e262]: Pay your dining bill using Rasa
+        - generic [ref=f3e263]:
+          - generic [ref=f3e264]: "2"
+          - generic [ref=f3e265]: Get 20% cashback as RasaCoins after payment — valid till 14 days after payment
+        - generic [ref=f3e266]:
+          - generic [ref=f3e267]: "3"
+          - generic [ref=f3e268]: Use RasaCoins to save an extra 25% on your next bill — no minimum bill value
+      - button [ref=f3e269] [cursor=pointer]: Got it
+  - dialog [ref=f3e270]:
+    - generic [ref=f3e271]:
+      - generic [ref=f3e272]:
+        - generic [ref=f3e273]: Have a coupon?
+        - button [ref=f3e274] [cursor=pointer]:
+          - img [ref=f3e275]
+      - generic [ref=f3e277]: Enter a coupon code to avail discounts
+      - textbox [ref=f3e278]:
+        - /placeholder: Enter coupon code
+      - button [ref=f3e279] [cursor=pointer]: Apply coupon
