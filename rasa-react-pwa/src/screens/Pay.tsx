@@ -1,6 +1,6 @@
 import { useStore } from '@/state/store';
 import { getVendor } from '@/data';
-import { fmt, orderBill } from '@/lib/money';
+import { fmt } from '@/lib/money';
 import { cartSubtotal } from '@/state/selectors';
 import { s } from '@/lib/style';
 import { Icon } from '@/components';
@@ -17,8 +17,11 @@ export default function Pay() {
   const orderError = useStore((st) => st.orderError);
 
   const v = liveV ?? getVendor(vendorId);
-  const bill = orderBill(cartSubtotal(v, cart));
-  const moneyTotal = fmt(bill.total);
+  // The button must show what the backend will actually charge: the item subtotal. The mock
+  // orderBill (client-only ₹18 fee − 15% discount) must NOT be applied — the gateway charges the
+  // backend order total (sum of item prices), so a discounted label would misstate the charge.
+  const subtotal = cartSubtotal(v, cart);
+  const moneyTotal = fmt(subtotal);
   const balanceLabel = '₹1,240.50';
 
   const payVals = (id: string) => {

@@ -59,7 +59,7 @@ export default function Otp() {
 
       <div style={s('padding:26px 26px 0;flex:1')}>
         <div style={s("font:700 22px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.4px")}>Enter the code</div>
-        <div style={s("font:500 12.5px 'Inter';color:#9A93A6;margin-top:6px;line-height:1.5;margin-bottom:30px")}>We sent a 4-digit verification code to your phone. Enter it below to finish creating your account.</div>
+        <div style={s("font:500 12.5px 'Inter';color:#9A93A6;margin-top:6px;line-height:1.5;margin-bottom:30px")}>We sent a 6-digit verification code to your phone. Enter it below to finish creating your account.</div>
 
         <div style={s('display:flex;gap:9px;justify-content:center;margin-bottom:26px')}>
           {OTP_BOXES.map((i) => (

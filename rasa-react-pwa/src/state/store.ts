@@ -30,7 +30,12 @@ function newIdemKey(): string {
 }
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, '');
-  return digits.startsWith('91') ? '+' + digits : '+91' + digits;
+  // A bare 10-digit Indian mobile (which may itself start "91", e.g. 9187654321) must get +91 — key
+  // on LENGTH, not a naive startsWith('91'). Handle a leading 0 and an already-prefixed 91XXXXXXXXXX.
+  if (digits.length === 10) return '+91' + digits;
+  if (digits.length === 11 && digits.startsWith('0')) return '+91' + digits.slice(1);
+  if (digits.length === 12 && digits.startsWith('91')) return '+' + digits;
+  return '+' + digits; // already includes a country code
 }
 function shapeVendor(v: BackendVendor, rating?: { averageStars: number | null; count: number }): Vendor {
   const loc = v.location ? `${v.location.lat.toFixed(4)}, ${v.location.lng.toFixed(4)}` : 'Live location';
@@ -324,7 +329,15 @@ export const useStore = create<Store>((set, get) => ({
 
   go: (screen) => set({ screen, queueSheet: false, parkSheet: false, rasaInfoOpen: false, couponOpen: false }),
   openVendor: (id) => {
-    set({ screen: 'vendor', vendorId: id, tab: 'Menu' });
+    // A backend order is single-vendor: switching vendors must empty the cart (and any order made
+    // for it), so items from a previous vendor are never sent under this one.
+    const switching = id !== get().vendorId;
+    set({
+      screen: 'vendor',
+      vendorId: id,
+      tab: 'Menu',
+      ...(switching ? { cart: {}, orderId: null, orderError: '' } : {}),
+    });
     // If this is a live vendor, load its real menu (real menuItem uuids) so the cart is orderable.
     if (get().liveVendorById[id]) {
       api
@@ -454,9 +467,12 @@ export const useStore = create<Store>((set, get) => ({
       return;
     }
     const { cart, vendorId, orderId } = get();
-    // Only REAL menu-item uuids can be ordered (a live vendor's menu). Mock ids are skipped.
+    // Only REAL menu-item uuids belonging to the CURRENT live vendor's menu are ordered (mock ids and
+    // any stray foreign items are skipped — createOrder is single-vendor and rejects foreign items).
+    const menu = get().liveVendorById[vendorId]?.items;
+    const validIds = menu ? new Set(menu.map((m) => m.id)) : null;
     const items = Object.entries(cart)
-      .filter(([menuItemId]) => UUID_RE.test(menuItemId))
+      .filter(([menuItemId]) => UUID_RE.test(menuItemId) && (!validIds || validIds.has(menuItemId)))
       .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
     if (items.length === 0) {
       set({ orderError: 'Add items from a live vendor to pay online.' });
