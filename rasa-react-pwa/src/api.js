@@ -18,15 +18,13 @@
  * No backend changes are required — the endpoints are already there.
  */
 
-// In production the API base MUST be configured — silently defaulting to localhost would ship a
-// build that talks to nothing. Fail loudly at boot instead. In dev we allow the localhost default.
+// Defaults to the hosted RASA backend so the deployed apps work with zero extra config; set
+// VITE_API_BASE to override (a local backend in dev, or a different deployment).
 const RAW_BASE = import.meta.env.VITE_API_BASE;
-if (import.meta.env.PROD && !RAW_BASE) {
-  throw new Error(
-    'VITE_API_BASE is not set. A production build must be given the backend API base URL.',
-  );
-}
-const BASE = (RAW_BASE || 'http://localhost:3000/api/v1').replace(/\/$/, '');
+const DEFAULT_BASE = import.meta.env.DEV
+  ? 'http://localhost:3000/api/v1'
+  : 'https://rasap2-backend.onrender.com/api/v1';
+const BASE = (RAW_BASE || DEFAULT_BASE).replace(/\/$/, '');
 
 // Auth endpoints authenticate via the request body (credentials / OTP / refresh token), NOT the
 // access token — so a 401 from them means "bad credentials", never "token expired". They must skip

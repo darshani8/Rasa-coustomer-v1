@@ -83,7 +83,12 @@ export function loadRazorpay(): Promise<RazorpayConstructor> {
 
 // ── backend-wired flow ───────────────────────────────────────────────────────
 
-const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) || 'http://localhost:3000/api/v1').replace(/\/$/, '');
+const API_BASE = (
+  (import.meta.env.VITE_API_BASE as string | undefined) ||
+  (import.meta.env.DEV
+    ? 'http://localhost:3000/api/v1'
+    : 'https://rasap2-backend.onrender.com/api/v1')
+).replace(/\/$/, '');
 // Same storage key the api client uses for the access token.
 const TOKEN_KEY = 'rasa_access_token';
 
