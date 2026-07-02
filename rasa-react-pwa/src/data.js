@@ -134,4 +134,6 @@ export const VENDORS = {
 };
 
 export const HOME_ORDER = ['camion', 'artiste', 'punjab', 'chaat', 'handi', 'artisan', 'chai', 'saigon'];
-export const fmt = (n) => '₹' + n;
+// Format a rupee amount for display. Rounds to 2 decimals so floating-point sums never leak
+// artifacts like ₹691.9000000000001 (real amounts should be derived in integer paise upstream).
+export const fmt = (n) => '₹' + (Number(n) || 0).toFixed(2);

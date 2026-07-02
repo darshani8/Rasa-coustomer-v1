@@ -110,9 +110,11 @@ The "now serving" display shows the `orderNumber` of `nowServingOrderId` found i
    individual review text. The Reviews tab shows mock review data when a name-matched mock
    vendor exists, otherwise shows "No reviews yet".
 
-7. **Queue roles**: A customer-role JWT can read `GET /queue?vendor_id=<uuid>` for any vendor.
-   A vendor-role JWT can only read its own vendor's queue (403 otherwise). The PWA always uses
-   customer tokens so this is not a concern here.
+7. **Queue roles**: `GET /queue?vendor_id=<uuid>` is **vendor/admin only** — a customer-role JWT
+   gets **403**. (An earlier version of this note wrongly claimed customers could read it, which is
+   why the PWA once polled it and always failed.) A customer instead reads their own live position
+   from `GET /orders/:id` → `Order.position` (0-based; `null` when off the board). The PWA no longer
+   calls `/queue`.
 
 8. **Geofence re-plan** (`POST /orders/:id/location`): `updateOrderLocation()` is exported from
    `api.js` but not called from any screen. The ready-on-arrival feature requires a per-vendor

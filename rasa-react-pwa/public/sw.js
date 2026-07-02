@@ -1,6 +1,9 @@
 // Rasa service worker — app-shell + runtime caching for offline use.
 const CACHE = 'rasa-v1';
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
+// Derive the deploy base from the SW's own path (it is served at <base>sw.js) so a sub-path deploy
+// (e.g. GitHub Pages /repo/) resolves the shell correctly instead of assuming the domain root.
+const BASE = self.location.pathname.replace(/sw\.js$/, '');
+const SHELL = [BASE, BASE + 'index.html', BASE + 'manifest.webmanifest', BASE + 'icons/icon-192.png', BASE + 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -17,14 +20,18 @@ self.addEventListener('fetch', (e) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
 
+  // API traffic is NEVER cached — serving a stale cached API response would freeze "live" data
+  // (positions, order status) on a same-origin deploy. Let it always hit the network.
+  if (url.pathname.startsWith('/api/')) return;
+
   // Navigations: network-first, fall back to cached shell (offline-friendly SPA).
   if (request.mode === 'navigate') {
     e.respondWith(
       fetch(request).then((res) => {
         const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put('/index.html', copy));
+        caches.open(CACHE).then((c) => c.put(BASE + 'index.html', copy));
         return res;
-      }).catch(() => caches.match('/index.html'))
+      }).catch(() => caches.match(BASE + 'index.html'))
     );
     return;
   }

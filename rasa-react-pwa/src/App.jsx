@@ -3,6 +3,7 @@ import { VENDORS, HOME_ORDER, fmt } from './data.js';
 import { s } from './lib/style.js';
 import {
   isAuthenticated,
+  attemptSilentRefresh,
   login,
   register,
   verifyOtp,
@@ -14,9 +15,17 @@ import {
   vendorRatingSummary,
   createOrder,
   getOrder,
-  getQueue,
+  requestGeoLocation,
   paiseToRupees,
 } from './api.js';
+
+// Mock catalogue / fake bill / fake timers are shown ONLY when this build flag is on, and always
+// behind a visible "demo data" indicator — never presented as live data. (B8/B5)
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+// The backend menuItemId/vendorId are uuids; the mock catalogue uses ids like 'c1'. Guard against
+// posting a mock id to the live API (backend zod .uuid() would 400). (B7)
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (v) => typeof v === 'string' && UUID_RE.test(v);
 
 /* ---- Theme (Rasa maroon / olive / cream) ---- */
 const P = {
@@ -109,11 +118,33 @@ function shapeMenuItem(apiItem) {
 export default function App() {
   // ---- auth state ----
   const [authed, setAuthed] = useState(() => isAuthenticated());
+  // At boot, if the access token is expired but a refresh token is stored, try one silent refresh
+  // before showing the login screen — a returning user shouldn't have to log in again. (B10)
+  const [booting, setBooting] = useState(() => !isAuthenticated());
+
+  useEffect(() => {
+    if (!booting) return;
+    let cancelled = false;
+    attemptSilentRefresh().then((ok) => {
+      if (cancelled) return;
+      if (ok) setAuthed(true);
+      setBooting(false);
+    });
+    return () => { cancelled = true; };
+  }, [booting]);
 
   // When the user logs in from the Login screen we re-check
   const onAuthChange = useCallback(() => {
     setAuthed(isAuthenticated());
   }, []);
+
+  if (booting) {
+    return (
+      <div style={s('min-height:100vh;display:flex;align-items:center;justify-content:center')}>
+        <Spinner />
+      </div>
+    );
+  }
 
   if (!authed) {
     return (
@@ -142,6 +173,8 @@ function MainApp({ onAuthChange }) {
   // Live vendor list (from GET /vendors). null = not yet loaded.
   const [liveVendors, setLiveVendors] = useState(null);
   const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [vendorsLoadFailed, setVendorsLoadFailed] = useState(false); // B8: live-mode load failure
+  const [vendorsReload, setVendorsReload] = useState(0); // bump to retry the list load
 
   // Currently viewed vendor (may be shaped from live or mock)
   const [currentVendor, setCurrentVendor] = useState(null);
@@ -151,8 +184,14 @@ function MainApp({ onAuthChange }) {
   const [activeOrderId, setActiveOrderId] = useState(null);
   const [activeOrder, setActiveOrder] = useState(null);
 
-  // Live queue snapshot
-  const [queueSnapshot, setQueueSnapshot] = useState(null);
+  // True while a live vendor load failed and we're showing a retry state (no mock fallback). (B7)
+  const [vendorLoadFailed, setVendorLoadFailed] = useState(false);
+
+  // In-flight guard so a double-tap on "Join queue" can't fire two createOrder calls. (B11)
+  const [submitting, setSubmitting] = useState(false);
+  // A stable idempotency key for the CURRENT order attempt — reused across retries of the same
+  // attempt (a network retry must not create a second order), reset for a new attempt. (B1)
+  const orderKeyRef = useRef(null);
 
   // Error banner (shown dismissably at screen top)
   const [apiError, setApiError] = useState(null);
@@ -175,6 +214,7 @@ function MainApp({ onAuthChange }) {
     if (screen !== 'home') return;
     let cancelled = false;
     setVendorsLoading(true);
+    setVendorsLoadFailed(false);
     listVendors({ limit: 30 })
       .then(async (res) => {
         if (cancelled) return;
@@ -193,16 +233,21 @@ function MainApp({ onAuthChange }) {
         setLiveVendors(withRatings);
       })
       .catch(() => {
-        if (!cancelled) setApiError('Could not load vendors. Showing demo data.');
+        if (cancelled) return;
+        // B8: in live mode a failed load shows an error + retry, NOT a mock catalogue presented as
+        // real. Only DEMO_MODE renders the mock trucks (behind a visible "demo data" badge).
+        setVendorsLoadFailed(true);
+        setApiError(DEMO_MODE ? 'Could not load vendors. Showing demo data.' : 'Could not load vendors. Please retry.');
       })
       .finally(() => { if (!cancelled) setVendorsLoading(false); });
     return () => { cancelled = true; };
-  }, [screen]);
+  }, [screen, vendorsReload]);
 
   // ---- load vendor + menu when Vendor screen opens ----
   const loadVendorScreen = useCallback(async (id, isLive) => {
     setVendorLoading(true);
     setCurrentVendor(null);
+    setVendorLoadFailed(false);
     setApiError(null);
     try {
       if (isLive) {
@@ -216,36 +261,36 @@ function MainApp({ onAuthChange }) {
         shaped.items = (menuRes?.items || []).map(shapeMenuItem);
         setCurrentVendor(shaped);
       } else {
-        // Mock vendor
+        // Mock/demo vendor
         setCurrentVendor(VENDORS[id] || VENDORS.camion);
       }
     } catch (err) {
-      setApiError('Could not load vendor details.');
-      // Fall back to mock if possible
-      setCurrentVendor(VENDORS[id] || VENDORS.camion);
+      if (isLive) {
+        // B7: DO NOT fall back to a mock vendor in live mode — surface a retry state instead, so the
+        // customer never sees a different truck's menu (whose mock ids would fail on order).
+        setVendorLoadFailed(true);
+        setApiError('Could not load this vendor. Please retry.');
+      } else {
+        setCurrentVendor(VENDORS[id] || VENDORS.camion);
+      }
     } finally {
       setVendorLoading(false);
     }
   }, []);
 
-  // ---- queue + order polling (every 5 s while on queue screen) ----
+  // ---- order polling (every 5 s while on the queue screen) ----
+  // The live position comes from GET /orders/:id (Order.position) — customers are NOT allowed to
+  // read /queue (that endpoint is vendor/admin only, so polling it 403'd forever). (B2)
   useEffect(() => {
     if (screen !== 'queue') return;
-    if (!activeOrderId || !currentVendor) return;
-
-    const vidForQueue = vendorIdIsLive ? vendorId : null;
-    if (!vidForQueue) return; // no live vendor UUID — stay on mock UI
+    if (!activeOrderId) return; // no live order — nothing to poll (mock UI stays put)
 
     let cancelled = false;
     const poll = async () => {
       try {
-        const [order, queue] = await Promise.all([
-          getOrder(activeOrderId),
-          getQueue(vidForQueue),
-        ]);
+        const order = await getOrder(activeOrderId);
         if (cancelled) return;
         setActiveOrder(order);
-        setQueueSnapshot(queue);
       } catch {
         // silently ignore poll errors — the UI keeps its last state
       }
@@ -254,10 +299,12 @@ function MainApp({ onAuthChange }) {
     poll(); // immediate first fetch
     const t = setInterval(poll, 5000);
     return () => { cancelled = true; clearInterval(t); };
-  }, [screen, activeOrderId, vendorId, vendorIdIsLive, currentVendor]);
+  }, [screen, activeOrderId]);
 
   // ---- derived vendor (current) ----
-  const v = currentVendor || (vendorId ? (VENDORS[vendorId] || VENDORS.camion) : VENDORS.camion);
+  // In LIVE mode never substitute a mock vendor — a failed load shows a retry state instead of
+  // silently rendering a DIFFERENT truck's menu (whose mock item ids would 400 on order). (B7)
+  const v = currentVendor || (vendorIdIsLive ? null : (vendorId ? (VENDORS[vendorId] || VENDORS.camion) : VENDORS.camion));
 
   // ---- cart helpers ----
   const add = (id) => setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 }));
@@ -282,45 +329,78 @@ function MainApp({ onAuthChange }) {
 
   const cartCount = Object.values(cart).reduce((a, n) => a + n, 0);
 
-  // When using live menu items, compute subtotal from real paise prices
-  const subtotal = (() => {
+  // Cart subtotal in integer paise (real menu prices are paise; we convert to paise from the
+  // rupee-valued mock items so the math is always integer and float artifacts never appear). (B5)
+  const cartSubtotalPaise = (() => {
     if (v && v.items && v.items.length > 0) {
-      return v.items.reduce((acc, it) => acc + (cart[it.id] || 0) * it.price, 0);
+      return v.items.reduce((acc, it) => acc + (cart[it.id] || 0) * Math.round(it.price * 100), 0);
     }
-    // mock fallback
     return Object.keys(VENDORS).reduce(
-      (acc, vid) => acc + VENDORS[vid].items.reduce((a, it) => a + (cart[it.id] || 0) * it.price, 0), 0
+      (acc, vid) => acc + VENDORS[vid].items.reduce((a, it) => a + (cart[it.id] || 0) * Math.round(it.price * 100), 0), 0
     );
   })();
-  const bSub = subtotal > 0 ? subtotal : 360;
-  const fee = 18, disc = Math.round(bSub * 0.15), total = bSub + fee - disc;
 
-  // ---- queue position derived from live data ----
-  // position is 0-based in entries[]; ahead = position (0 means you're next)
-  const myQueueEntry = queueSnapshot?.entries?.find((e) => e.orderId === activeOrderId);
-  const livePosition = myQueueEntry?.position ?? null;       // 0-based
-  const liveAhead = livePosition != null ? livePosition : null;
-  const liveNowServingOrderId = queueSnapshot?.nowServingOrderId ?? null;
+  // The bill. When a LIVE order exists we display the backend's authoritative totalPaise — never a
+  // client-invented total. The fake floor / ₹18 fee / 15% discount are DEMO-only (behind the flag),
+  // never shown for a live order. All math is integer paise; format at the edge. (B5)
+  const money = (() => {
+    const liveTotalPaise = activeOrder?.totalPaise != null ? Number(activeOrder.totalPaise) : null;
+    if (liveTotalPaise != null) {
+      const r = liveTotalPaise / 100;
+      return { totalPaise: liveTotalPaise, total: r, bSub: r, fee: 0, disc: 0, live: true };
+    }
+    if (DEMO_MODE) {
+      const bSub = (cartSubtotalPaise > 0 ? cartSubtotalPaise : 36000) / 100;
+      const fee = 18, disc = Math.round(bSub * 0.15);
+      return { totalPaise: null, total: bSub + fee - disc, bSub, fee, disc, live: false };
+    }
+    const bSub = cartSubtotalPaise / 100;
+    return { totalPaise: null, total: bSub, bSub, fee: 0, disc: 0, live: false };
+  })();
+
+  // ---- queue position derived from the live order (0-based; 0 = you're next; null = off board) ----
+  const liveAhead = activeOrder?.position ?? null;
 
   // ---- join queue (place order) ----
   const handleJoinQueue = async () => {
     if (!vendorIdIsLive) {
-      // Mock path — just navigate
+      // Mock/demo path — just navigate (no live order created).
       go('queue');
       return;
     }
-    const items = Object.entries(cart).map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
+    if (submitting) return; // B11: ignore a double-tap while a create is in flight
+    // B7: only ever post real uuid menu item ids — a stray mock id ('c1') would 400 on the backend.
+    const items = Object.entries(cart)
+      .filter(([menuItemId]) => isUuid(menuItemId))
+      .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
     if (items.length === 0) {
-      go('queue');
+      setApiError('Please add at least one item before joining the queue.');
       return;
     }
+    // B1: a stable per-attempt Idempotency-Key — created once, reused on retry so a network retry
+    // of the SAME attempt can never create a second order; cleared only on success.
+    if (!orderKeyRef.current) orderKeyRef.current = crypto.randomUUID();
+    setSubmitting(true);
     try {
-      const order = await createOrder({ vendorId, items });
+      // B12: real location or null (never a fake coordinate). A denial degrades to an offline order
+      // and surfaces a notice rather than mis-feeding ready-on-arrival with a wrong position.
+      const loc = await requestGeoLocation();
+      if (!loc) setApiError('Location is off — joining without ready-on-arrival timing.');
+      const order = await createOrder({
+        vendorId,
+        items,
+        idempotencyKey: orderKeyRef.current,
+        customerLocation: loc,
+      });
       setActiveOrderId(order.id);
       setActiveOrder(order);
+      orderKeyRef.current = null; // a NEW attempt gets a fresh key
       go('queue');
     } catch (err) {
+      // Keep orderKeyRef so a retry reuses the same key (safe dedupe on the backend).
       setApiError(err.message || 'Could not place order. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -333,13 +413,16 @@ function MainApp({ onAuthChange }) {
   const ctx = {
     v, vendorId, vendorIdIsLive, cart, add, remove, openVendor, go, tab, setTab,
     payMethod, setPayMethod, qSec, diet, setDiet, cartCount,
-    money: { bSub, fee, disc, total },
+    money,
     installEvt, setInstallEvt,
     // live data
-    liveVendors, vendorsLoading,
-    vendorLoading,
+    liveVendors, vendorsLoading, vendorsLoadFailed,
+    retryVendors: () => setVendorsReload((x) => x + 1),
+    vendorLoading, vendorLoadFailed,
+    retryVendor: () => loadVendorScreen(vendorId, vendorIdIsLive),
     activeOrderId, activeOrder,
-    queueSnapshot, liveAhead, liveNowServingOrderId,
+    liveAhead,
+    submitting,
     handleJoinQueue,
     handleLogout,
     apiError, setApiError,
@@ -444,11 +527,15 @@ function Login({ ctx }) {
 
   const inputStyle = s('width:100%;background:#fff;border:1.5px solid ' + P.border + ';border-radius:14px;padding:14px 16px;font:500 14px \'Inter\';color:' + P.ink + ';outline:none;box-sizing:border-box');
 
+  // The backend phone regex is ^\+?[0-9]{8,15}$ — spaces/dashes are rejected. The placeholder shows
+  // a friendly "+91 98765 43210", so strip whitespace/dashes before sending. (B9)
+  const cleanPhone = () => phone.replace(/[\s-]/g, '');
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(''); setPending(true);
     try {
-      await login({ phone, password });
+      await login({ phone: cleanPhone(), password });
       onAuthChange();
     } catch (err) {
       setError(err.message || 'Login failed. Check your credentials.');
@@ -461,7 +548,7 @@ function Login({ ctx }) {
     e.preventDefault();
     setError(''); setPending(true);
     try {
-      await register({ phone, password });
+      await register({ phone: cleanPhone(), password });
       setInfo('Account created! Check the server terminal for your 6-digit OTP.');
       setMode('otp');
     } catch (err) {
@@ -475,7 +562,7 @@ function Login({ ctx }) {
     e.preventDefault();
     setError(''); setPending(true);
     try {
-      await verifyOtp({ phone, otp });
+      await verifyOtp({ phone: cleanPhone(), otp });
       onAuthChange();
     } catch (err) {
       setError(err.message || 'Invalid OTP. Please try again.');
@@ -487,7 +574,7 @@ function Login({ ctx }) {
   const handleResendOtp = async () => {
     setError('');
     try {
-      await resendOtp({ phone });
+      await resendOtp({ phone: cleanPhone() });
       setInfo('A new OTP has been sent.');
     } catch (err) {
       setError(err.message || 'Could not resend OTP.');
@@ -650,16 +737,18 @@ function Login({ ctx }) {
 
 /* ============================ HOME ============================ */
 function Home({ ctx }) {
-  const { openVendor, diet, setDiet, installEvt, setInstallEvt, liveVendors, vendorsLoading, handleLogout, apiError, setApiError } = ctx;
+  const { openVendor, diet, setDiet, installEvt, setInstallEvt, liveVendors, vendorsLoading, vendorsLoadFailed, retryVendors, handleLogout, apiError, setApiError } = ctx;
   const dietMeta = { all: { label: 'All trucks', accent: P.primary }, veg: { label: 'Pure Veg', accent: '#2F8F4E' }, nonveg: { label: 'Non-veg', accent: '#C0392B' } };
   const order = ['all', 'veg', 'nonveg'];
   const next = order[(order.indexOf(diet) + 1) % 3];
   const dm = dietMeta[diet];
 
-  // Choose between live vendors and mock fallback
+  // Live vendors, or the mock catalogue ONLY in demo mode. In live mode a failed load shows a retry
+  // (below) instead of silently substituting demo trucks. (B8)
+  const showMock = !liveVendors && DEMO_MODE;
   const vendors = liveVendors
     ? liveVendors.filter((vd) => diet === 'all' || vd.diet === diet)
-    : HOME_ORDER.map((id) => VENDORS[id]).filter((vd) => diet === 'all' || vd.diet === diet);
+    : (showMock ? HOME_ORDER.map((id) => VENDORS[id]).filter((vd) => diet === 'all' || vd.diet === diet) : []);
 
   const isLiveMode = !!liveVendors;
 
@@ -701,6 +790,14 @@ function Home({ ctx }) {
         <div style={s('display:flex;align-items:center;gap:6px;padding:0 22px;margin-bottom:4px')}>
           <span style={s('width:6px;height:6px;border-radius:50%;background:#2F9E6E;animation:rasaPulse 1.4s infinite')} />
           <span style={s("font:600 10px 'JetBrains Mono',monospace;color:#2F9E6E;letter-spacing:.5px;text-transform:uppercase")}>Live data</span>
+        </div>
+      )}
+
+      {/* demo data badge — mock catalogue is only ever shown behind an explicit indicator (B8) */}
+      {showMock && (
+        <div style={s('display:flex;align-items:center;gap:6px;padding:0 22px;margin-bottom:4px')}>
+          <span style={s('width:6px;height:6px;border-radius:50%;background:#C08A3C')} />
+          <span style={s("font:600 10px 'JetBrains Mono',monospace;color:#C08A3C;letter-spacing:.5px;text-transform:uppercase")}>Demo data</span>
         </div>
       )}
 
@@ -755,6 +852,14 @@ function Home({ ctx }) {
 
         {vendorsLoading && !liveVendors && <Spinner />}
 
+        {/* live-mode load failure → retry, never a silent mock swap (B8) */}
+        {!vendorsLoading && vendorsLoadFailed && !liveVendors && !DEMO_MODE && (
+          <div style={s('text-align:center;padding:24px 0')}>
+            <div style={s("font:500 13px 'Inter';color:#9A93A6;margin-bottom:12px")}>Couldn't load vendors.</div>
+            <button onClick={retryVendors} style={s('background:' + P.primary + ';color:#fff;border:none;border-radius:12px;padding:10px 20px;font:700 12.5px \'Inter\';cursor:pointer')}>Retry</button>
+          </div>
+        )}
+
         {vendors.map((vd) => (
           <button
             key={vd.id}
@@ -786,7 +891,7 @@ function Home({ ctx }) {
 
 /* ============================ VENDOR ============================ */
 function Vendor({ ctx }) {
-  const { v, cart, add, remove, go, tab, setTab, cartCount, vendorLoading, handleJoinQueue, apiError, setApiError } = ctx;
+  const { v, cart, add, remove, go, tab, setTab, cartCount, vendorLoading, vendorLoadFailed, retryVendor, submitting, handleJoinQueue, apiError, setApiError } = ctx;
 
   // Build category list from current vendor items
   const cats = [];
@@ -801,6 +906,12 @@ function Vendor({ ctx }) {
 
       {vendorLoading ? (
         <Spinner />
+      ) : vendorLoadFailed || !v ? (
+        <div style={s('text-align:center;padding:48px 24px')}>
+          <div style={s("font:600 15px " + DISPLAY + ";color:" + P.ink + ";margin-bottom:6px")}>Couldn't load this vendor</div>
+          <div style={s("font:500 12.5px 'Inter';color:#9A93A6;margin-bottom:18px")}>Check your connection and try again.</div>
+          <button onClick={retryVendor} style={s('background:' + P.primary + ';color:#fff;border:none;border-radius:12px;padding:11px 22px;font:700 13px \'Inter\';cursor:pointer')}>Retry</button>
+        </div>
       ) : (
         <>
           <TruckBanner src={(v && v.banner) || PLACEHOLDER_IMG} h={180}>
@@ -900,15 +1011,18 @@ function Vendor({ ctx }) {
         </>
       )}
 
-      {/* sticky footer */}
-      <div style={s('position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid ' + P.border + ';padding:13px 18px;z-index:45;margin-top:8px')}>
-        <button
-          onClick={handleJoinQueue}
-          style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:14px;padding:15px;font:700 13.5px ' + DISPLAY + ';letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px')}
-        >
-          {cartCount > 0 ? 'Join queue · ' + cartCount + ' items' : 'Join queue'} <span>→</span>
-        </button>
-      </div>
+      {/* sticky footer — hidden on the failed/retry state (nothing to order) */}
+      {!vendorLoading && !vendorLoadFailed && v && (
+        <div style={s('position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid ' + P.border + ';padding:13px 18px;z-index:45;margin-top:8px')}>
+          <button
+            onClick={handleJoinQueue}
+            disabled={submitting}
+            style={s('width:100%;background:' + P.primary + ';color:#fff;border:none;border-radius:14px;padding:15px;font:700 13.5px ' + DISPLAY + ';letter-spacing:.3px;cursor:' + (submitting ? 'default' : 'pointer') + ';opacity:' + (submitting ? '.6' : '1') + ';display:flex;align-items:center;justify-content:center;gap:8px')}
+          >
+            {submitting ? 'Joining…' : (cartCount > 0 ? 'Join queue · ' + cartCount + ' items' : 'Join queue')} {!submitting && <span>→</span>}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -957,29 +1071,25 @@ function MenuRow({ item, qty, add, remove }) {
 
 /* ============================ QUEUE ============================ */
 function Queue({ ctx }) {
-  const { v, qSec, go, add, activeOrderId, activeOrder, liveAhead, liveNowServingOrderId, queueSnapshot } = ctx;
+  const { v, qSec, go, add, activeOrderId, activeOrder, liveAhead } = ctx;
 
-  // Determine whether we have live data to show
+  // A live order exists once we've placed one; its position drives the display. (B2)
   const hasLiveOrder = !!activeOrderId && !!activeOrder;
-  const hasLiveQueue = !!queueSnapshot;
 
-  // Timer display — use local countdown when no live data
+  // Fake countdown + mock token/serving numbers are DEMO-ONLY — never shown for a live order. (B8)
   const qm = Math.floor(qSec / 60), qs = qSec % 60;
   const qTime = String(qm).padStart(2, '0') + ':' + String(qs).padStart(2, '0');
-
-  // Mock queue values (fallback)
   const yourTok = 96;
   const served = Math.floor((765 - qSec) / 8);
   const servingNum = Math.min(yourTok, 84 + served);
   const mockAhead = Math.max(0, yourTok - servingNum);
 
-  // Live values when available
-  const ahead = hasLiveQueue ? (liveAhead ?? 0) : mockAhead;
-  const displayToken = hasLiveOrder ? (activeOrder.orderNumber || 'A-?') : `A-${yourTok}`;
-  const displayServing = liveNowServingOrderId
-    ? (queueSnapshot?.entries?.find(e => e.orderId === liveNowServingOrderId)?.orderNumber || 'A-?')
-    : `A-${servingNum}`;
-
+  // Live position from Order.position (0-based; 0 = up next; null = off board / not yet placed).
+  const ahead = hasLiveOrder ? liveAhead : (DEMO_MODE ? mockAhead : null);
+  const aheadLabel = ahead == null ? 'Waiting for your turn' : ahead === 0 ? "You're up next" : `${ahead} ahead of you`;
+  const displayToken = hasLiveOrder ? (activeOrder.orderNumber || 'A-?') : (DEMO_MODE ? `A-${yourTok}` : '—');
+  // No customer-visible "now serving" (that needs the vendor-only /queue) — show the order's status.
+  const statusLabel = hasLiveOrder ? (activeOrder.status || 'pending') : (DEMO_MODE ? `A-${servingNum}` : '—');
   const leaveMin = Math.max(0, qm - 5);
 
   return (
@@ -996,7 +1106,7 @@ function Queue({ ctx }) {
         </TruckBanner>
 
         {/* live data indicator */}
-        {hasLiveQueue && (
+        {hasLiveOrder && (
           <div style={s('display:flex;align-items:center;gap:6px;margin-top:10px')}>
             <span style={s('width:6px;height:6px;border-radius:50%;background:#5BD6A0;animation:rasaPulse 1.1s infinite')} />
             <span style={s("font:600 9px 'JetBrains Mono',monospace;color:#5BD6A0;text-transform:uppercase;letter-spacing:.6px")}>Live · polling every 5s</span>
@@ -1009,9 +1119,9 @@ function Queue({ ctx }) {
             <div>
               <div style={s('display:flex;align-items:center;gap:6px')}>
                 <span style={s('width:6px;height:6px;border-radius:50%;background:#5BD6A0;animation:rasaPulse 1.1s infinite')} />
-                <span style={s("font:600 8px 'JetBrains Mono',monospace;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.6px")}>Now serving at counter</span>
+                <span style={s("font:600 8px 'JetBrains Mono',monospace;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.6px")}>{hasLiveOrder ? 'Your order status' : 'Now serving at counter'}</span>
               </div>
-              <div style={s('font:700 32px ' + DISPLAY + ';color:#fff;margin-top:6px;line-height:1')}>{displayServing}</div>
+              <div style={s('font:700 32px ' + DISPLAY + ';color:#fff;margin-top:6px;line-height:1;text-transform:capitalize')}>{statusLabel}</div>
             </div>
             <div style={s('text-align:right;background:rgba(224,138,60,.16);border:1px solid rgba(224,138,60,.3);border-radius:12px;padding:7px 11px')}>
               <div style={s("font:600 8px 'JetBrains Mono',monospace;color:rgba(255,255,255,.55);text-transform:uppercase")}>Your token</div>
@@ -1020,7 +1130,7 @@ function Queue({ ctx }) {
           </div>
           <div style={s('margin-top:13px;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px')}>
             <Svg size={16} stroke="#5BD6A0" d={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></>} />
-            <span style={s("font:600 12px 'Inter';color:rgba(255,255,255,.9)")}>{ahead === 0 ? "You're up next" : `${ahead} ahead of you`}</span>
+            <span style={s("font:600 12px 'Inter';color:rgba(255,255,255,.9)")}>{aheadLabel}</span>
             <span style={s('margin-left:auto;display:flex;align-items:center;gap:5px')}>
               <span style={s('width:5px;height:5px;border-radius:50%;background:#5BD6A0;animation:rasaPulse 1.1s infinite')} />
               <span style={s("font:700 8.5px 'JetBrains Mono',monospace;color:#5BD6A0;text-transform:uppercase;letter-spacing:.6px")}>Live</span>
@@ -1037,8 +1147,8 @@ function Queue({ ctx }) {
                 <Svg size={16} stroke={P.primary} style={{ animation: 'rasaSpin 8s linear infinite' }} d={<><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2" /></>} />
               </div>
             </div>
-            <div style={s('font:700 38px ' + DISPLAY + ';color:' + P.ink + ';margin-top:18px;line-height:1;letter-spacing:1px')}>{qTime}</div>
-            <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:6px")}>minutes remaining</div>
+            <div style={s('font:700 38px ' + DISPLAY + ';color:' + P.ink + ';margin-top:18px;line-height:1;letter-spacing:1px')}>{hasLiveOrder ? (ahead == null ? '—' : ahead === 0 ? 'Next' : String(ahead)) : qTime}</div>
+            <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:6px")}>{hasLiveOrder ? (ahead === 0 || ahead == null ? 'in the queue' : 'ahead of you') : 'minutes remaining'}</div>
           </div>
           <div style={s('background:#fff;border:1px solid ' + P.border + ';border-radius:20px;padding:16px;display:flex;flex-direction:column')}>
             <div style={s('display:flex;align-items:center;justify-content:space-between')}>
@@ -1048,7 +1158,7 @@ function Queue({ ctx }) {
               </div>
             </div>
             <div style={s('margin-top:18px')}>
-              <div style={s('font:700 24px ' + DISPLAY + ';color:' + P.ink + ';line-height:1')}>{leaveMin <= 0 ? 'Now' : leaveMin + ' min'}</div>
+              <div style={s('font:700 24px ' + DISPLAY + ';color:' + P.ink + ';line-height:1')}>{hasLiveOrder ? '—' : (leaveMin <= 0 ? 'Now' : leaveMin + ' min')}</div>
               <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:5px")}>buffer to spare</div>
             </div>
           </div>

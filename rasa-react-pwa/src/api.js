@@ -18,7 +18,21 @@
  * No backend changes are required — the endpoints are already there.
  */
 
-const BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:3000/api/v1').replace(/\/$/, '');
+// In production the API base MUST be configured — silently defaulting to localhost would ship a
+// build that talks to nothing. Fail loudly at boot instead. In dev we allow the localhost default.
+const RAW_BASE = import.meta.env.VITE_API_BASE;
+if (import.meta.env.PROD && !RAW_BASE) {
+  throw new Error(
+    'VITE_API_BASE is not set. A production build must be given the backend API base URL.',
+  );
+}
+const BASE = (RAW_BASE || 'http://localhost:3000/api/v1').replace(/\/$/, '');
+
+// Auth endpoints authenticate via the request body (credentials / OTP / refresh token), NOT the
+// access token — so a 401 from them means "bad credentials", never "token expired". They must skip
+// the refresh-retry path so the server's real error message reaches the UI.
+const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/verify-otp', '/auth/resend-otp', '/auth/refresh'];
+const isAuthPath = (path) => AUTH_PATHS.some((p) => path.startsWith(p));
 
 // ---- token storage -------------------------------------------------------
 
@@ -70,7 +84,7 @@ async function request(path, init = {}, _isRetry = false) {
 
   const res = await fetch(`${BASE}${path}`, { ...init, headers });
 
-  if (res.status === 401 && !_isRetry) {
+  if (res.status === 401 && !_isRetry && !isAuthPath(path)) {
     // Attempt one silent token refresh, then retry the original request.
     try {
       if (!refreshPromise) {
@@ -214,6 +228,24 @@ export async function refresh(refreshToken) {
   return refreshInternal(refreshToken);
 }
 
+/**
+ * Boot helper: if the access token is expired/absent but a rotating refresh token is stored, try
+ * ONE silent refresh so a returning user is not bounced to the login screen. Returns true if the
+ * session is (now) valid, false otherwise (clears tokens on a failed refresh).
+ */
+export async function attemptSilentRefresh() {
+  if (isAuthenticated()) return true;
+  const rTok = localStorage.getItem(REFRESH_KEY);
+  if (!rTok) return false;
+  try {
+    await refreshInternal(rTok);
+    return true;
+  } catch {
+    clearTokens();
+    return false;
+  }
+}
+
 // ---- vendor endpoints -----------------------------------------------------
 
 /**
@@ -259,39 +291,39 @@ export async function vendorRatingSummary(vendorId) {
 // ---- order endpoints ------------------------------------------------------
 
 /**
- * Obtain the device's current GPS coordinates.
- * Falls back to a central Bangalore coordinate if the user denies or the API
- * is unavailable — online orders require customerLocation in the request body.
+ * Obtain the device's current GPS coordinates, or null if the user denies or the API is
+ * unavailable. We deliberately do NOT invent a fallback coordinate: feeding a fake location into
+ * ready-on-arrival planning silently mis-schedules the cook-start. The caller surfaces a notice and
+ * falls back to an offline order (no location required) when this resolves null.
  */
-function getGeoLocation() {
-  const BANGALORE_FALLBACK = { lat: 12.9716, lng: 77.5946 };
+export function requestGeoLocation() {
   return new Promise((resolve) => {
-    if (!navigator.geolocation) { resolve(BANGALORE_FALLBACK); return; }
+    if (!navigator.geolocation) { resolve(null); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(BANGALORE_FALLBACK),
+      () => resolve(null),
       { timeout: 5000, maximumAge: 60_000 },
     );
   });
 }
 
 /**
- * POST /orders
+ * POST /orders  (Idempotency-Key REQUIRED — the backend rejects a keyless POST with 400)
  * items: [{ menuItemId: uuid, quantity: number }]
- * Geolocation is obtained internally; the caller never sends prices.
- * Returns the created Order (201).
+ * The caller passes a stable per-attempt idempotencyKey (reused on retry of the same attempt so a
+ * network retry never creates a second order) and the resolved customerLocation (or null).
+ * With a location the order is 'online' (ready-on-arrival); without one it is 'offline' (no
+ * location required). The caller never sends prices. Returns the created Order (201).
  */
-export async function createOrder({ vendorId, items }) {
-  const customerLocation = await getGeoLocation();
+export async function createOrder({ vendorId, items, idempotencyKey, customerLocation }) {
+  if (!idempotencyKey) throw new Error('createOrder requires an idempotencyKey');
+  const body = customerLocation
+    ? { vendorId, channel: 'online', paymentIntent: 'pay_at_truck', customerLocation, items }
+    : { vendorId, channel: 'offline', paymentIntent: 'pay_at_truck', items };
   return request('/orders', {
     method: 'POST',
-    body: JSON.stringify({
-      vendorId,
-      channel: 'online',
-      paymentIntent: 'pay_at_truck',
-      customerLocation,
-      items,
-    }),
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify(body),
   });
 }
 
@@ -325,10 +357,11 @@ export async function updateOrderLocation(id, { lat, lng }) {
 // ---- queue endpoint -------------------------------------------------------
 
 /**
- * GET /queue?vendor_id=<uuid>
+ * GET /queue?vendor_id=<uuid>  — VENDOR / ADMIN ONLY.
  * Returns { vendorId, nowServingOrderId: string|null, entries: [{ orderId, orderNumber, position }] }
- * NOTE: vendor-role tokens can only read their own vendor's queue.
- * Customer-role tokens can read any vendor's queue (for tracking their own order).
+ * NOTE: this endpoint is `requireRole('vendor','admin')` on the backend — a customer token gets 403.
+ * A CUSTOMER tracks their own live position via GET /orders/:id → Order.position (0-based, or null
+ * when off the board). This client no longer calls /queue; the export remains for vendor tooling.
  */
 export async function getQueue(vendorId) {
   return request(`/queue?vendor_id=${encodeURIComponent(vendorId)}`);
