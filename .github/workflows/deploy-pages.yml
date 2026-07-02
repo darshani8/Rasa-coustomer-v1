@@ -1,0 +1,55 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Let GITHUB_TOKEN publish to Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One Pages deployment at a time.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rasa-react-pwa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: rasa-react-pwa/package-lock.json
+      - run: npm ci
+      # Project Pages serve under /<repo>/, so build with that base. The backend API base comes
+      # from a repository secret (Settings → Secrets and variables → Actions → VITE_API_BASE),
+      # e.g. https://rasap2-backend.onrender.com/api/v1. A production build with it unset fails
+      # loudly at boot by design (see src/api.js).
+      - run: npx vite build --base=/Rasa-coustomer-v1/
+        env:
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: rasa-react-pwa/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
