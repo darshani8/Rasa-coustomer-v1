@@ -4,6 +4,13 @@ import { Icon } from '@/components';
 
 export default function Login() {
   const go = useStore((st) => st.go);
+  const phoneInput = useStore((st) => st.phoneInput);
+  const pwInput = useStore((st) => st.pwInput);
+  const setPhoneInput = useStore((st) => st.setPhoneInput);
+  const setPwInput = useStore((st) => st.setPwInput);
+  const doLogin = useStore((st) => st.doLogin);
+  const authBusy = useStore((st) => st.authBusy);
+  const authError = useStore((st) => st.authError);
   const goHome = () => go('home');
   const goSignup = () => go('signup');
 
@@ -19,12 +26,28 @@ export default function Login() {
         <div style={s("font:600 11px 'Inter';color:#6F6A7D;margin-bottom:6px")}>Phone number</div>
         <div style={s('display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,13px);padding:13px 14px;margin-bottom:14px')}>
           <span style={s("font:700 13px var(--display,'Space Grotesk');color:#3B2630;border-right:1px solid #ECE6DB;padding-right:10px")}>+91</span>
-          <input placeholder="98765 43210" style={s("flex:1;border:none;outline:none;background:none;font:500 13px 'Inter';color:#3B2630;min-width:0")} />
+          <input
+            value={phoneInput}
+            onChange={(e) => setPhoneInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void doLogin(); }}
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="98765 43210"
+            style={s("flex:1;border:none;outline:none;background:none;font:500 13px 'Inter';color:#3B2630;min-width:0")}
+          />
         </div>
 
         <div style={s("font:600 11px 'Inter';color:#6F6A7D;margin-bottom:6px")}>Password</div>
         <div style={s('display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,13px);padding:13px 14px;margin-bottom:8px')}>
-          <input type="password" defaultValue="rasa1234" style={s("flex:1;border:none;outline:none;background:none;font:500 13px 'Inter';color:#3B2630;min-width:0")} />
+          <input
+            type="password"
+            value={pwInput}
+            onChange={(e) => setPwInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void doLogin(); }}
+            autoComplete="current-password"
+            placeholder="Your password"
+            style={s("flex:1;border:none;outline:none;background:none;font:500 13px 'Inter';color:#3B2630;min-width:0")}
+          />
           <Icon size={17} stroke="#B0A9BC" w={2.1}>
             <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
             <circle cx="12" cy="12" r="3" />
@@ -32,7 +55,11 @@ export default function Login() {
         </div>
         <div style={s('text-align:right;margin-bottom:22px')}><span style={s("font:600 11.5px 'Inter';color:var(--p,#7D1535);cursor:pointer")}>Forgot password?</span></div>
 
-        <button onClick={goHome} style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:pointer")}>Sign in</button>
+        {authError && (
+          <div style={s("background:#FBE7EC;border:1px solid #EAC9D1;border-radius:var(--radM,12px);padding:10px 13px;margin-bottom:14px;font:500 12px 'Inter';color:var(--p,#7D1535)")}>{authError}</div>
+        )}
+
+        <button onClick={() => void doLogin()} disabled={authBusy} style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:" + (authBusy ? 'default' : 'pointer') + ';opacity:' + (authBusy ? '.6' : '1'))}>{authBusy ? 'Signing in…' : 'Sign in'}</button>
 
         <div style={s('display:flex;align-items:center;gap:12px;margin:22px 0')}><div style={s('flex:1;height:1px;background:#E7DFD2')} /><span style={s("font:600 10px 'JetBrains Mono',monospace;color:#B0A9BC;letter-spacing:.5px")}>OR</span><div style={s('flex:1;height:1px;background:#E7DFD2')} /></div>
 

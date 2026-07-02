@@ -25,9 +25,13 @@ export default function Home() {
   const openStreet = useStore((s) => s.openStreet);
   const openCategory = useStore((s) => s.openCategory);
 
+  const liveVendors = useStore((s) => s.liveVendors);
   const meta = DIET_META[diet];
-  const vendors = HOME_ORDER.map((id) => VENDORS[id]!).filter((v) => diet === 'all' || VENDOR_DIET[v.id] === diet);
+  // Live backend vendors when signed in + loaded; otherwise the mock demo catalogue. The diet chip
+  // filters the mock set (live vendors carry no diet tag, so they always show).
+  const vendors = liveVendors ?? HOME_ORDER.map((id) => VENDORS[id]!).filter((v) => diet === 'all' || VENDOR_DIET[v.id] === diet);
   const cards = vendors.map(toVendorCard);
+  const heroVendorId = vendors[0]?.id ?? 'artiste';
 
   const dietBtnStyle =
     "display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;cursor:pointer;font:700 11.5px 'Inter';white-space:nowrap;background:#fff;border:1.5px solid " +
@@ -107,7 +111,7 @@ export default function Home() {
           <div style={s('position:relative')}>
             <div style={s("display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border-radius:999px;padding:5px 11px;font:600 10px 'JetBrains Mono',monospace;letter-spacing:.5px;color:#fff;text-transform:uppercase")}>First order</div>
             <div style={s("font:700 var(--hero-title, 23px) var(--display,'Space Grotesk');color:#fff;line-height:1.15;margin-top:12px;max-width:var(--hero-max-w, 230px);letter-spacing:-.3px")}>20% off your first order.</div>
-            <button onClick={() => openVendor('artiste')} style={s("margin-top:16px;background:#fff;color:var(--p,#7D1535);border:none;border-radius:999px;padding:10px 18px;font:700 12.5px 'Inter';cursor:pointer;display:inline-flex;align-items:center;gap:6px")}>Order ahead <span style={s('font-size:14px')}>→</span></button>
+            <button onClick={() => openVendor(heroVendorId)} style={s("margin-top:16px;background:#fff;color:var(--p,#7D1535);border:none;border-radius:999px;padding:10px 18px;font:700 12.5px 'Inter';cursor:pointer;display:inline-flex;align-items:center;gap:6px")}>Order ahead <span style={s('font-size:14px')}>→</span></button>
           </div>
         </div>
       </div>

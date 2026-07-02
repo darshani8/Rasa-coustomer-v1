@@ -2,7 +2,8 @@ import type { KeyboardEvent } from 'react';
 import { useStore } from '@/state/store';
 import { s } from '@/lib/style';
 
-const OTP_BOXES = [0, 1, 2, 3];
+const OTP_BOXES = [0, 1, 2, 3, 4, 5];
+const LAST = OTP_BOXES.length - 1;
 
 const focusBox = (i: number) => {
   const el = document.getElementById('otp-box-' + i);
@@ -12,13 +13,16 @@ const focusBox = (i: number) => {
 export default function Otp() {
   const otp = useStore((st) => st.otp);
   const setOtpDigit = useStore((st) => st.setOtpDigit);
-  const confirmOtp = useStore((st) => st.confirmOtp);
+  const doVerifyOtp = useStore((st) => st.doVerifyOtp);
+  const doResendOtp = useStore((st) => st.doResendOtp);
+  const authBusy = useStore((st) => st.authBusy);
+  const authError = useStore((st) => st.authError);
   const go = useStore((st) => st.go);
 
   const otpIncomplete = otp.some((d) => d === '');
 
   const otpBox = (i: number) =>
-    "width:58px;height:64px;text-align:center;font:700 26px var(--display,'Space Grotesk');color:#3B2630;" +
+    "width:44px;height:58px;text-align:center;font:700 22px var(--display,'Space Grotesk');color:#3B2630;" +
     'background:#fff;border-radius:var(--radM,14px);outline:none;box-sizing:border-box;caret-color:var(--p,#7D1535);' +
     'transition:border-color .18s ease, box-shadow .18s ease;' +
     (otp[i]
@@ -36,7 +40,7 @@ export default function Otp() {
   const onInput = (i: number, raw: string) => {
     setOtpDigit(i, raw);
     const d = (raw.match(/\d/g) ?? []).pop() ?? '';
-    if (d && i < 3) focusBox(i + 1);
+    if (d && i < LAST) focusBox(i + 1);
   };
 
   // Backspace on an empty box steps focus back to the previous box.
@@ -57,7 +61,7 @@ export default function Otp() {
         <div style={s("font:700 22px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.4px")}>Enter the code</div>
         <div style={s("font:500 12.5px 'Inter';color:#9A93A6;margin-top:6px;line-height:1.5;margin-bottom:30px")}>We sent a 4-digit verification code to your phone. Enter it below to finish creating your account.</div>
 
-        <div style={s('display:flex;gap:13px;justify-content:center;margin-bottom:26px')}>
+        <div style={s('display:flex;gap:9px;justify-content:center;margin-bottom:26px')}>
           {OTP_BOXES.map((i) => (
             <input
               key={i}
@@ -74,12 +78,17 @@ export default function Otp() {
         </div>
 
         <div style={s("text-align:center;font:500 12px 'Inter';color:#9A93A6")}>
-          Didn't get a code? <span style={s("color:var(--p,#7D1535);font-weight:700;cursor:pointer")}>Resend</span>
+          Didn't get a code? <span onClick={() => void doResendOtp()} style={s("color:var(--p,#7D1535);font-weight:700;cursor:pointer")}>Resend</span>
         </div>
+        <div style={s("text-align:center;font:500 11px 'Inter';color:#B0A9BC;margin-top:8px;line-height:1.5")}>In development the code is printed in the backend server log.</div>
+
+        {authError && (
+          <div style={s("background:#FBE7EC;border:1px solid #EAC9D1;border-radius:var(--radM,12px);padding:10px 13px;margin-top:16px;font:500 12px 'Inter';color:var(--p,#7D1535)")}>{authError}</div>
+        )}
       </div>
 
       <div style={s('position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px;z-index:45')}>
-        <button onClick={confirmOtp} disabled={otpIncomplete} style={s(confirmOtpStyle)}>Confirm OTP</button>
+        <button onClick={() => void doVerifyOtp()} disabled={otpIncomplete || authBusy} style={s(confirmOtpStyle)}>{authBusy ? 'Verifying…' : 'Confirm OTP'}</button>
       </div>
     </div>
   );

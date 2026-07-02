@@ -3,7 +3,6 @@ import { getVendor } from '@/data';
 import { fmt, orderBill } from '@/lib/money';
 import { cartSubtotal } from '@/state/selectors';
 import { s } from '@/lib/style';
-import { openRazorpay } from '@/lib/razorpay';
 import { Icon } from '@/components';
 
 export default function Pay() {
@@ -12,8 +11,12 @@ export default function Pay() {
   const setPayMethod = useStore((st) => st.setPayMethod);
   const vendorId = useStore((st) => st.vendorId);
   const cart = useStore((st) => st.cart);
+  const liveV = useStore((st) => st.liveVendorById[vendorId]);
+  const placeOrderAndPay = useStore((st) => st.placeOrderAndPay);
+  const orderBusy = useStore((st) => st.orderBusy);
+  const orderError = useStore((st) => st.orderError);
 
-  const v = getVendor(vendorId);
+  const v = liveV ?? getVendor(vendorId);
   const bill = orderBill(cartSubtotal(v, cart));
   const moneyTotal = fmt(bill.total);
   const balanceLabel = '₹1,240.50';
@@ -169,21 +172,15 @@ export default function Pay() {
       </div>
 
       <div style={s('position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px;z-index:45')}>
+        {orderError && (
+          <div style={s("background:#FBE7EC;border:1px solid #EAC9D1;border-radius:var(--radM,12px);padding:10px 13px;margin-bottom:10px;font:500 12px 'Inter';color:var(--p,#7D1535)")}>{orderError}</div>
+        )}
         <button
-          onClick={async () => {
-            if (payMethod === 'razorpay') {
-              await openRazorpay({
-                amount: bill.total,
-                description: `Rasa order — ${v.name}`,
-                onSuccess: () => go('success'),
-              });
-              return;
-            }
-            go('success');
-          }}
-          style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 14px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:pointer")}
+          onClick={() => void placeOrderAndPay()}
+          disabled={orderBusy}
+          style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 14px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:" + (orderBusy ? 'default' : 'pointer') + ';opacity:' + (orderBusy ? '.6' : '1'))}
         >
-          Pay {moneyTotal}
+          {orderBusy ? 'Processing…' : `Pay ${moneyTotal}`}
         </button>
         <div style={s('text-align:center;margin-top:10px')}>
           <button onClick={() => go('failed')} style={s("font:600 11.5px 'Inter';color:#B0A9BC;cursor:pointer;text-decoration:underline;text-underline-offset:2px;background:none;border:none;padding:0")}>Simulate a declined payment</button>

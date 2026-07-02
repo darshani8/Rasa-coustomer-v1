@@ -4,8 +4,14 @@ import { Icon, ICON } from '@/components';
 
 export default function Signup() {
   const go = useStore((st) => st.go);
+  const phoneInput = useStore((st) => st.phoneInput);
+  const pwInput = useStore((st) => st.pwInput);
+  const setPhoneInput = useStore((st) => st.setPhoneInput);
+  const setPwInput = useStore((st) => st.setPwInput);
+  const doRegister = useStore((st) => st.doRegister);
+  const authBusy = useStore((st) => st.authBusy);
+  const authError = useStore((st) => st.authError);
   const goLogin = () => go('login');
-  const goOtp = () => go('otp');
 
   const labelStyle = "font:600 11px 'Inter';color:#6F6A7D;margin-bottom:6px";
   const inputStyle =
@@ -30,14 +36,14 @@ export default function Signup() {
         <div style={s(labelStyle)}>Phone number</div>
         <div style={s("display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,13px);padding:13px 14px;margin-bottom:14px")}>
           <span style={s("font:700 13px var(--display,'Space Grotesk');color:#3B2630;border-right:1px solid #ECE6DB;padding-right:10px")}>+91</span>
-          <input placeholder="98765 43210" style={s("flex:1;border:none;outline:none;background:none;font:500 13px 'Inter';color:#3B2630;min-width:0")} />
+          <input value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} inputMode="tel" placeholder="98765 43210" style={s("flex:1;border:none;outline:none;background:none;font:500 13px 'Inter';color:#3B2630;min-width:0")} />
         </div>
 
         <div style={s(labelStyle)}>Email</div>
         <input placeholder="you@example.com" style={s(inputStyle)} />
 
         <div style={s(labelStyle)}>Create password</div>
-        <input type="password" placeholder="At least 8 characters" style={s(inputStyle)} />
+        <input type="password" value={pwInput} onChange={(e) => setPwInput(e.target.value)} placeholder="At least 8 characters" style={s(inputStyle)} />
 
         <div style={s(labelStyle)}>Confirm password</div>
         <input type="password" placeholder="Re-enter your password" style={s("width:100%;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,13px);padding:13px 14px;font:500 13px 'Inter';color:#3B2630;outline:none;box-sizing:border-box;margin-bottom:16px")} />
@@ -51,7 +57,10 @@ export default function Signup() {
       </div>
 
       <div style={s('position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px;z-index:45')}>
-        <button onClick={goOtp} style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:pointer")}>Create account</button>
+        {authError && (
+          <div style={s("background:#FBE7EC;border:1px solid #EAC9D1;border-radius:var(--radM,12px);padding:10px 13px;margin-bottom:10px;font:500 12px 'Inter';color:var(--p,#7D1535)")}>{authError}</div>
+        )}
+        <button onClick={() => void doRegister()} disabled={authBusy} style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:" + (authBusy ? 'default' : 'pointer') + ';opacity:' + (authBusy ? '.6' : '1'))}>{authBusy ? 'Creating…' : 'Create account'}</button>
         <div style={s("text-align:center;margin-top:11px;font:500 12px 'Inter';color:#9A93A6")}>Already have an account? <button onClick={goLogin} style={s("background:none;border:none;padding:0;font:inherit;color:var(--p,#7D1535);font-weight:700;cursor:pointer")}>Sign in</button></div>
       </div>
     </div>

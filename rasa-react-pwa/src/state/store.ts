@@ -6,12 +6,65 @@ import {
   DEFAULT_CHAT,
   DEFAULT_NOTIFS,
   OFFER_FILTERS,
+  PLACEHOLDER_IMG,
   type Address,
   type ChatMessage,
+  type MenuItem,
   type NotifKey,
   type OfferFilter,
+  type Vendor,
 } from '@/data';
 import type { BillOfferId } from '@/lib/money';
+import * as api from '@/api';
+import type { BackendMenuItem, BackendVendor } from '@/api';
+import { payForOrder } from '@/lib/razorpay';
+
+// ── backend ↔ UI shaping (same shapes the mock uses, so no screen markup changes) ──
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function newIdemKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  return digits.startsWith('91') ? '+' + digits : '+91' + digits;
+}
+function shapeVendor(v: BackendVendor, rating?: { averageStars: number | null; count: number }): Vendor {
+  const loc = v.location ? `${v.location.lat.toFixed(4)}, ${v.location.lng.toFixed(4)}` : 'Live location';
+  return {
+    id: v.id,
+    name: v.name,
+    cuisine: 'Food Truck',
+    area: loc,
+    rating: rating?.averageStars ?? 4.5,
+    ratings: String(rating?.count ?? 0),
+    price: '₹₹',
+    cur: '₹',
+    wait: v.defaultPrepMinutes ?? 15,
+    open: v.acceptingOrders ? 'Accepting orders now' : 'Not accepting orders',
+    banner: PLACEHOLDER_IMG,
+    about: `${v.name} — live on Rasa. Order ahead and skip the queue.`,
+    hoursWk: '—',
+    hoursWe: '—',
+    phone: '—',
+    address: loc,
+    items: [],
+    reviews: [],
+  };
+}
+function shapeItem(m: BackendMenuItem): MenuItem {
+  return {
+    id: m.id,
+    name: m.name,
+    desc: `Prep ${m.prepMinutes} min`,
+    price: Math.round(Number(m.pricePaise) / 100),
+    cat: 'Menu',
+    img: PLACEHOLDER_IMG,
+  };
+}
 
 /** Every routable screen in the app (see reference `names` map). `offers` = Order details. */
 export type Screen =
@@ -87,6 +140,19 @@ export interface AppState {
   queueSheet: boolean;
   // auth
   otp: string[];
+  // ── live backend session + data ──
+  authed: boolean;
+  authBusy: boolean;
+  authError: string;
+  phoneInput: string;
+  pwInput: string;
+  // live vendors (shaped into the mock Vendor shape). null = not loaded → mock demo data is shown.
+  liveVendors: Vendor[] | null;
+  liveVendorById: Record<string, Vendor>;
+  // the real backend order being paid for + its progress
+  orderId: string | null;
+  orderBusy: boolean;
+  orderError: string;
 }
 
 export interface AppActions {
@@ -103,6 +169,17 @@ export interface AppActions {
   // auth / otp
   setOtpDigit: (i: number, raw: string) => void;
   confirmOtp: () => void;
+  // ── live backend auth + data + payment ──
+  setPhoneInput: (v: string) => void;
+  setPwInput: (v: string) => void;
+  doLogin: () => Promise<void>;
+  doRegister: () => Promise<void>;
+  doVerifyOtp: () => Promise<void>;
+  doResendOtp: () => Promise<void>;
+  doLogout: () => void;
+  bootSession: () => Promise<void>;
+  loadVendors: () => Promise<void>;
+  placeOrderAndPay: () => Promise<void>;
   // park order
   parkOrder: () => void;
   parkConfirm: () => void;
@@ -169,7 +246,7 @@ export interface AppActions {
 export type Store = AppState & AppActions;
 
 const initialState: AppState = {
-  screen: 'home',
+  screen: api.isAuthenticated() ? 'home' : 'login',
   vendorId: 'artiste',
   tab: 'Menu',
   cart: {},
@@ -211,7 +288,18 @@ const initialState: AppState = {
   parkQty: 1,
   parkSlot: null,
   queueSheet: false,
-  otp: ['', '', '', ''],
+  otp: ['', '', '', '', '', ''], // backend OTP is 6 digits
+  // Live session: start at the sign-in gate unless a token is already stored.
+  authed: api.isAuthenticated(),
+  authBusy: false,
+  authError: '',
+  phoneInput: '',
+  pwInput: '',
+  liveVendors: null,
+  liveVendorById: {},
+  orderId: null,
+  orderBusy: false,
+  orderError: '',
 };
 
 const cartCountOf = (cart: Record<string, number>): number =>
@@ -222,18 +310,36 @@ export const useStore = create<Store>((set, get) => ({
 
   tick: () => set((s) => ({ qSec: s.qSec > 0 ? s.qSec - 1 : 0 })),
 
-  add: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 } })),
+  // A cart change invalidates any order already created for the previous cart, so the next Pay
+  // creates a fresh backend order (never re-uses a stale one → no wrong amount).
+  add: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 }, orderId: null, orderError: '' })),
   remove: (id) =>
     set((s) => {
       const cart = { ...s.cart };
       const n = (cart[id] ?? 0) - 1;
       if (n <= 0) delete cart[id];
       else cart[id] = n;
-      return { cart };
+      return { cart, orderId: null, orderError: '' };
     }),
 
   go: (screen) => set({ screen, queueSheet: false, parkSheet: false, rasaInfoOpen: false, couponOpen: false }),
-  openVendor: (id) => set({ screen: 'vendor', vendorId: id, tab: 'Menu' }),
+  openVendor: (id) => {
+    set({ screen: 'vendor', vendorId: id, tab: 'Menu' });
+    // If this is a live vendor, load its real menu (real menuItem uuids) so the cart is orderable.
+    if (get().liveVendorById[id]) {
+      api
+        .listMenu(id)
+        .then((res) => {
+          const items = (res.items ?? []).map(shapeItem);
+          set((s) => {
+            const base = s.liveVendorById[id];
+            if (!base) return {};
+            return { liveVendorById: { ...s.liveVendorById, [id]: { ...base, items } } };
+          });
+        })
+        .catch(() => {});
+    }
+  },
   openStreet: (id) => set({ screen: 'street', street: id, streetFilter: 'All' }),
   openCategory: (name) => set({ foodCat: name, screen: 'catresults' }),
   setTab: (tab) => set({ tab }),
@@ -246,7 +352,137 @@ export const useStore = create<Store>((set, get) => ({
       return { otp };
     }),
   confirmOtp: () => {
-    if (get().otp.every((d) => d !== '')) set({ screen: 'home', otp: ['', '', '', ''] });
+    if (get().otp.every((d) => d !== '')) set({ screen: 'home', otp: ['', '', '', '', '', ''] });
+  },
+
+  // ── live backend auth + data + payment ──
+  setPhoneInput: (v) => set({ phoneInput: v, authError: '' }),
+  setPwInput: (v) => set({ pwInput: v, authError: '' }),
+  doRegister: async () => {
+    const { phoneInput, pwInput } = get();
+    if (phoneInput.replace(/\D/g, '').length < 8 || pwInput.length < 8) {
+      set({ authError: 'Enter a phone number and a password (min 8 characters).' });
+      return;
+    }
+    set({ authBusy: true, authError: '' });
+    try {
+      await api.register({ phone: normalizePhone(phoneInput), password: pwInput });
+      set({ authBusy: false, screen: 'otp', otp: ['', '', '', '', '', ''] });
+    } catch (e) {
+      set({ authBusy: false, authError: (e as Error).message || 'Could not create your account.' });
+    }
+  },
+  doVerifyOtp: async () => {
+    const code = get().otp.join('');
+    if (code.length < 6) {
+      set({ authError: 'Enter the 6-digit code.' });
+      return;
+    }
+    set({ authBusy: true, authError: '' });
+    try {
+      await api.verifyOtp({ phone: normalizePhone(get().phoneInput), otp: code });
+      set({ authed: true, authBusy: false, screen: 'home', otp: ['', '', '', '', '', ''], phoneInput: '', pwInput: '' });
+      void get().loadVendors();
+    } catch (e) {
+      set({ authBusy: false, authError: (e as Error).message || 'Invalid or expired code.' });
+    }
+  },
+  doResendOtp: async () => {
+    try {
+      await api.resendOtp({ phone: normalizePhone(get().phoneInput) });
+      set({ authError: '' });
+    } catch {
+      /* silent — the throttle intentionally hides whether a code was recently sent */
+    }
+  },
+  doLogin: async () => {
+    const { phoneInput, pwInput } = get();
+    const phone = normalizePhone(phoneInput);
+    if (phoneInput.replace(/\D/g, '').length < 8 || !pwInput) {
+      set({ authError: 'Enter your phone number and password.' });
+      return;
+    }
+    set({ authBusy: true, authError: '' });
+    try {
+      await api.login({ phone, password: pwInput });
+      set({ authed: true, authBusy: false, screen: 'home', phoneInput: '', pwInput: '' });
+      void get().loadVendors();
+    } catch (e) {
+      set({ authBusy: false, authError: (e as Error).message || 'Sign in failed. Check your details.' });
+    }
+  },
+  doLogout: () => {
+    api.clearTokens();
+    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, cart: {} });
+  },
+  // On boot, if the access token expired but a refresh token exists, refresh silently before deciding
+  // whether to show the sign-in gate; then load live vendors when authed.
+  bootSession: async () => {
+    if (!api.isAuthenticated()) {
+      const ok = await api.attemptSilentRefresh().catch(() => false);
+      if (ok) set({ authed: true, screen: get().screen === 'login' ? 'home' : get().screen });
+      else {
+        set({ authed: false });
+        return;
+      }
+    }
+    void get().loadVendors();
+  },
+  loadVendors: async () => {
+    if (!api.isAuthenticated()) return;
+    try {
+      const res = await api.listVendors({ limit: 30 });
+      const shaped = await Promise.all(
+        (res.data ?? []).map(async (v) => {
+          const rating = await api.vendorRatingSummary(v.id).catch(() => null);
+          return shapeVendor(v, rating ?? undefined);
+        }),
+      );
+      if (shaped.length === 0) return; // keep the mock demo when the backend has no vendors yet
+      const byId: Record<string, Vendor> = {};
+      shaped.forEach((v) => {
+        byId[v.id] = v;
+      });
+      set((s) => ({ liveVendors: shaped, liveVendorById: { ...s.liveVendorById, ...byId } }));
+    } catch {
+      /* backend unreachable → keep the mock demo */
+    }
+  },
+  placeOrderAndPay: async () => {
+    if (!api.isAuthenticated()) {
+      set({ screen: 'login', authError: 'Please sign in to pay.' });
+      return;
+    }
+    const { cart, vendorId, orderId } = get();
+    // Only REAL menu-item uuids can be ordered (a live vendor's menu). Mock ids are skipped.
+    const items = Object.entries(cart)
+      .filter(([menuItemId]) => UUID_RE.test(menuItemId))
+      .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
+    if (items.length === 0) {
+      set({ orderError: 'Add items from a live vendor to pay online.' });
+      return;
+    }
+    set({ orderBusy: true, orderError: '' });
+    try {
+      let id = orderId;
+      if (!id) {
+        const order = await api.createOrder({ vendorId, items, idempotencyKey: newIdemKey() });
+        id = order.id;
+        set({ orderId: id });
+      }
+      set({ orderBusy: false });
+      await payForOrder({
+        orderId: id,
+        description: 'Rasa order',
+        onConfirmed: () => get().go('success'),
+        onUnavailable: () =>
+          set({ orderError: 'Online payment is not configured on the server — pay at the counter.' }),
+        onError: (m) => set({ orderError: m }),
+        onDismiss: () => {},
+      });
+    } catch (e) {
+      set({ orderBusy: false, orderError: (e as Error).message || 'Could not place the order.' });
+    }
   },
 
   parkOrder: () => set({ parkSheet: true }),

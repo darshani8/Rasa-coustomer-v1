@@ -21,10 +21,14 @@ export default function Vendor() {
   const parkOrder = useStore((st) => st.parkOrder);
   const openVendor = useStore((st) => st.openVendor);
 
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const allVendors = HOME_ORDER.map((id) => VENDORS[id]!).filter((v): v is NonNullable<typeof v> => Boolean(v)).map(toVendorCard);
+  const liveVendors = useStore((st) => st.liveVendors);
+  const liveV = useStore((st) => st.liveVendorById[vendorId]);
 
-  const v = getVendor(vendorId);
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const allVendors = (liveVendors ?? HOME_ORDER.map((id) => VENDORS[id]!).filter((x): x is NonNullable<typeof x> => Boolean(x))).map(toVendorCard);
+
+  // Live vendor (with its real menu, loaded on openVendor) when signed in; otherwise mock demo data.
+  const v = liveV ?? getVendor(vendorId);
   const vRatings = v.ratings + ' ratings';
   const subtotal = cartSubtotal(v, cart);
   const groups = menuGroups(v, cart);

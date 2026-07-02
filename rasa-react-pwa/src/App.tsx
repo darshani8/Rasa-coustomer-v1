@@ -13,6 +13,7 @@ import { DesktopNav } from '@/components/DesktopNav';
 export default function App() {
   const tick = useStore((s) => s.tick);
   const screen = useStore((s) => s.screen);
+  const bootSession = useStore((s) => s.bootSession);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Live-queue countdown: one global 1s tick.
@@ -20,6 +21,11 @@ export default function App() {
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
   }, [tick]);
+
+  // Boot the backend session (silent refresh if the access token expired) + load live vendors.
+  useEffect(() => {
+    void bootSession();
+  }, [bootSession]);
 
   // Reset scroll to the top whenever the screen changes.
   useEffect(() => {
