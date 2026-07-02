@@ -325,9 +325,11 @@ export function requestGeoLocation() {
  */
 export async function createOrder({ vendorId, items, idempotencyKey, customerLocation }) {
   if (!idempotencyKey) throw new Error('createOrder requires an idempotencyKey');
+  // pay_in_app: the customer pays online via Razorpay Checkout (see the payments section below). The
+  // gateway order is opened for the order regardless of intent; this signals the online-first flow.
   const body = customerLocation
-    ? { vendorId, channel: 'online', paymentIntent: 'pay_at_truck', customerLocation, items }
-    : { vendorId, channel: 'offline', paymentIntent: 'pay_at_truck', items };
+    ? { vendorId, channel: 'online', paymentIntent: 'pay_in_app', customerLocation, items }
+    : { vendorId, channel: 'offline', paymentIntent: 'pay_in_app', items };
   return request('/orders', {
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
@@ -359,6 +361,40 @@ export async function updateOrderLocation(id, { lat, lng }) {
   return request(`/orders/${id}/location`, {
     method: 'POST',
     body: JSON.stringify({ lat, lng }),
+  });
+}
+
+// ---- payments (Razorpay online payment) -----------------------------------
+
+/**
+ * GET /payments/config
+ * Returns { provider: 'stub'|'razorpay', keyId: string|null }. keyId is the PUBLIC Razorpay key id
+ * used to open Checkout (null when no real gateway is configured → fall back to pay-at-counter).
+ */
+export async function getPaymentConfig() {
+  return request('/payments/config');
+}
+
+/**
+ * GET /payments/by-order/:orderId
+ * Returns the Payment row: { orderId, providerOrderId, status, amountPaise, currency, ... }.
+ * The gateway order is opened asynchronously after order creation, so `providerOrderId` may be null
+ * for a moment — the caller polls until it appears (see lib/razorpay.payForOrder).
+ */
+export async function getPaymentByOrder(orderId) {
+  return request(`/payments/by-order/${orderId}`);
+}
+
+/**
+ * POST /payments/:orderId/verify
+ * Posts the Razorpay Checkout success callback so the server verifies the signature and confirms the
+ * payment. Body: { razorpayOrderId, razorpayPaymentId, razorpaySignature }.
+ * Returns { status: 'confirmed'|'already_confirmed'|'not_payable'|'ignored' }.
+ */
+export async function verifyPayment(orderId, { razorpayOrderId, razorpayPaymentId, razorpaySignature }) {
+  return request(`/payments/${orderId}/verify`, {
+    method: 'POST',
+    body: JSON.stringify({ razorpayOrderId, razorpayPaymentId, razorpaySignature }),
   });
 }
 
