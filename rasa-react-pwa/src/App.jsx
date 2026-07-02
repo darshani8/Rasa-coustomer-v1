@@ -27,6 +27,17 @@ const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid = (v) => typeof v === 'string' && UUID_RE.test(v);
 
+// A v4-uuid for the Idempotency-Key. crypto.randomUUID exists only in secure contexts (HTTPS /
+// localhost), so fall back to a Math.random generator on a plain-HTTP LAN origin used for testing,
+// where crypto.randomUUID is undefined and would otherwise throw. (B1)
+function newIdemKey() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 /* ---- Theme (Rasa maroon / olive / cream) ---- */
 const P = {
   primary: '#7D1535', primary2: '#9E2A48', ink: '#3B2630', paper: '#FAF6F3',
@@ -307,16 +318,19 @@ function MainApp({ onAuthChange }) {
   const v = currentVendor || (vendorIdIsLive ? null : (vendorId ? (VENDORS[vendorId] || VENDORS.camion) : VENDORS.camion));
 
   // ---- cart helpers ----
-  const add = (id) => setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 }));
-  const remove = (id) => setCart((c) => {
+  // Any cart mutation invalidates the pending idempotency key: the next Join-queue is a NEW attempt
+  // with a different body, so it must get a fresh key rather than reuse a retained one (B1).
+  const add = (id) => { orderKeyRef.current = null; setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 })); };
+  const remove = (id) => { orderKeyRef.current = null; setCart((c) => {
     const n = { ...c };
     const q = (n[id] || 0) - 1;
     if (q <= 0) delete n[id];
     else n[id] = q;
     return n;
-  });
+  }); };
 
   const openVendor = (id, isLive = false) => {
+    orderKeyRef.current = null; // new vendor ⇒ new order attempt ⇒ fresh key (B1)
     setVendorId(id);
     setVendorIdIsLive(isLive);
     setTab('Menu');
@@ -377,9 +391,11 @@ function MainApp({ onAuthChange }) {
       setApiError('Please add at least one item before joining the queue.');
       return;
     }
-    // B1: a stable per-attempt Idempotency-Key — created once, reused on retry so a network retry
-    // of the SAME attempt can never create a second order; cleared only on success.
-    if (!orderKeyRef.current) orderKeyRef.current = crypto.randomUUID();
+    // B1: a stable per-attempt Idempotency-Key — created once for THIS cart+vendor, reused on retry
+    // so a network retry of the same attempt can never create a second order. It is invalidated the
+    // moment the cart or vendor changes (see add/remove/openVendor), so a retained key is never
+    // reused with a different request body — which the backend would reject as a reuse (422).
+    if (!orderKeyRef.current) orderKeyRef.current = newIdemKey();
     setSubmitting(true);
     try {
       // B12: real location or null (never a fake coordinate). A denial degrades to an offline order

@@ -233,17 +233,25 @@ export async function refresh(refreshToken) {
  * ONE silent refresh so a returning user is not bounced to the login screen. Returns true if the
  * session is (now) valid, false otherwise (clears tokens on a failed refresh).
  */
+let bootRefreshPromise = null;
 export async function attemptSilentRefresh() {
   if (isAuthenticated()) return true;
-  const rTok = localStorage.getItem(REFRESH_KEY);
-  if (!rTok) return false;
-  try {
-    await refreshInternal(rTok);
-    return true;
-  } catch {
-    clearTokens();
-    return false;
-  }
+  // De-dupe concurrent callers onto ONE refresh. Refresh tokens rotate (single-use), so React
+  // StrictMode's dev double-mount firing this twice would otherwise present the already-consumed
+  // token on the second call, fail, and clearTokens() — bouncing a valid returning user. (B10)
+  if (bootRefreshPromise) return bootRefreshPromise;
+  bootRefreshPromise = (async () => {
+    const rTok = localStorage.getItem(REFRESH_KEY);
+    if (!rTok) return false;
+    try {
+      await refreshInternal(rTok);
+      return true;
+    } catch {
+      clearTokens();
+      return false;
+    }
+  })().finally(() => { bootRefreshPromise = null; });
+  return bootRefreshPromise;
 }
 
 // ---- vendor endpoints -----------------------------------------------------

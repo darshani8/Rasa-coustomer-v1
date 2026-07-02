@@ -21,8 +21,10 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(request.url);
 
   // API traffic is NEVER cached — serving a stale cached API response would freeze "live" data
-  // (positions, order status) on a same-origin deploy. Let it always hit the network.
-  if (url.pathname.startsWith('/api/')) return;
+  // (positions, order status) on a same-origin deploy. Match both a root-mounted API ('/api/…') and
+  // one under the deploy base ('<base>api/…') so a sub-path deploy isn't quietly re-frozen. Let it
+  // always hit the network.
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith(BASE + 'api/')) return;
 
   // Navigations: network-first, fall back to cached shell (offline-friendly SPA).
   if (request.mode === 'navigate') {
