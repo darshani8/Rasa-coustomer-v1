@@ -8,11 +8,9 @@ interface GridItem { label: string; sub?: string; icon: string; go?: Screen; sub
 const backPath = 'm15 18-6-6 6-6';
 const bellPath = 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0';
 const cameraPath = 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z';
-const clockPath = 'M12 12m-9 0M12 7v5l3 2';
 const chevRPath = 'm9 18 6-6-6-6';
 
 const orders: GridItem[] = [
-  { label: 'Parked Orders', sub: '3 Orders', icon: clockPath, go: 'orders' },
   { label: 'Active Orders', sub: '2 Orders', icon: 'M5.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM18.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM15 17.5H9m6-11h2l2.5 7M5.5 17.5 9 6.5h4', go: 'queue' },
   { label: 'Order History', sub: 'View all', icon: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4ZM3 6h18M16 10a4 4 0 0 1-8 0', go: 'orders' },
   { label: 'Reorder', sub: 'Buy again', icon: 'M3 2v6h6M21 22v-6h-6M3.5 13a9 9 0 0 0 15 5.7L21 16M21 11a9 9 0 0 0-15-5.7L3 8', go: 'orders' },

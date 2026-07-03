@@ -18,7 +18,6 @@ export default function Vendor() {
   const remove = useStore((st) => st.remove);
   const payBillStart = useStore((st) => st.payBillStart);
   const openQueueSheet = useStore((st) => st.openQueueSheet);
-  const parkOrder = useStore((st) => st.parkOrder);
   const openVendor = useStore((st) => st.openVendor);
 
   const liveVendors = useStore((st) => st.liveVendors);
@@ -313,14 +312,8 @@ export default function Vendor() {
           (absolute would scroll away with the content inside the .app-scroll container) */}
       <div style={s('position:sticky;bottom:0;left:0;right:0;z-index:35;margin-top:auto;background:rgba(251,250,247,.97);backdrop-filter:blur(12px);border-top:1px solid #EFE9DF;padding:13px 18px 17px;display:flex;gap:10px')}>
         <button
-          onClick={parkOrder}
-          style={s('flex:0 0 auto;background:none;color:var(--p,#7D1535);border:1.5px solid var(--p,#7D1535);border-radius:var(--radM,14px);padding:14px 18px;font:700 13px var(--display,"Space Grotesk");letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap')}
-        >
-          Park order
-        </button>
-        <button
           onClick={openQueueSheet}
-          style={s('flex:1;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radM,14px);padding:15px;font:700 13.5px var(--display,"Space Grotesk");letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 22px -10px rgba(125,21,53,.6)')}
+          style={s('flex:1;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radM,14px);padding:16px;font:700 14px var(--display,"Space Grotesk");letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 22px -10px rgba(125,21,53,.6)')}
         >
           Join queue <span>→</span>
         </button>

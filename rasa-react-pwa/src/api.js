@@ -321,25 +321,13 @@ export function requestGeoLocation() {
  * With a location the order is 'online' (ready-on-arrival); without one it is 'offline' (no
  * location required). The caller never sends prices. Returns the created Order (201).
  */
-/**
- * Bookable park-order windows for a vendor, straight from the vendor's live slot rules
- * (GET /api/v1/slots). Each window: { startMs, endMs, status: 'available'|'limited'|'full'|'too_soon',
- * bookable }. Empty array = parking is currently off for this vendor.
- */
-export async function getSlots(vendorId) {
-  const data = await request(`/slots?vendor_id=${encodeURIComponent(vendorId)}`);
-  return { windows: data.windows || [] };
-}
-
-export async function createOrder({ vendorId, items, idempotencyKey, customerLocation, slotStartMs }) {
+export async function createOrder({ vendorId, items, idempotencyKey, customerLocation }) {
   if (!idempotencyKey) throw new Error('createOrder requires an idempotencyKey');
   // pay_in_app: the customer pays online via Razorpay Checkout (see the payments section below). The
   // gateway order is opened for the order regardless of intent; this signals the online-first flow.
-  // slotStartMs (optional) parks the order into a vendor pickup window (reserve->attach on the server).
   const body = customerLocation
     ? { vendorId, channel: 'online', paymentIntent: 'pay_in_app', customerLocation, items }
     : { vendorId, channel: 'offline', paymentIntent: 'pay_in_app', items };
-  if (slotStartMs) body.slotStartMs = slotStartMs;
   return request('/orders', {
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
