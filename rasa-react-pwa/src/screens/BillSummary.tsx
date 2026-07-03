@@ -19,6 +19,7 @@ export default function BillSummary() {
     confirmBillPay,
     orderError,
     orderBusy,
+    liveVendor,
     goPayMethod,
   } = useStore((st) => ({
     go: st.go,
@@ -29,10 +30,11 @@ export default function BillSummary() {
     confirmBillPay: st.confirmBillPay,
     orderError: st.orderError,
     orderBusy: st.orderBusy,
+    liveVendor: st.liveVendorById[st.vendorId],
     goPayMethod: () => st.go('paymethod'),
   }));
 
-  const vendor = getVendor(vendorId);
+  const vendor = liveVendor ?? getVendor(vendorId);
   const discount = billDiscount(billOffer, billAmt);
   const payable = billPayable(billAmt, billOffer);
   const payLabel = billMethodName(billPay);
@@ -133,6 +135,7 @@ export default function BillSummary() {
         </div>
         <button
           onClick={() => confirmBillPay()}
+          disabled={orderBusy}
           style={s('flex-shrink:0;background:var(--p,#7D1535);color:#fff;border:none;border-radius:13px;padding:14px 24px;font:700 13px var(--display,"Space Grotesk");cursor:pointer;display:flex;align-items:center;gap:7px')}
         >
           {orderBusy ? 'Starting…' : 'Pay now'} <span>→</span>

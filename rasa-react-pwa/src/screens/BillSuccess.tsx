@@ -7,14 +7,15 @@ import { Icon } from '@/components';
 const checkPath = 'M20 6 9 17l-5-5';
 
 export default function BillSuccess() {
-  const { go, vendorId, billAmt, billOffer } = useStore((st) => ({
+  const { go, vendorId, billAmt, billOffer, liveVendor } = useStore((st) => ({
     go: st.go,
     vendorId: st.vendorId,
     billAmt: st.billAmt,
     billOffer: st.billOffer,
+    liveVendor: st.liveVendorById[st.vendorId],
   }));
 
-  const vendor = getVendor(vendorId);
+  const vendor = liveVendor ?? getVendor(vendorId);
   const payable = billPayable(billAmt, billOffer);
   const coins = rasaCoinsEarned(payable);
 
