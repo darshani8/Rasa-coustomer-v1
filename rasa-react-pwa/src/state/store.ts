@@ -18,6 +18,7 @@ import type { BillOfferId } from '@/lib/money';
 import * as api from '@/api';
 import type { BackendMenuItem, BackendVendor } from '@/api';
 import { payForOrder } from '@/lib/razorpay';
+import { isFarFromVendor } from '@/lib/geo';
 
 // ── backend ↔ UI shaping (same shapes the mock uses, so no screen markup changes) ──
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -40,6 +41,7 @@ function normalizePhone(raw: string): string {
 function shapeVendor(v: BackendVendor, rating?: { averageStars: number | null; count: number }): Vendor {
   const loc = v.location ? `${v.location.lat.toFixed(4)}, ${v.location.lng.toFixed(4)}` : 'Live location';
   return {
+    geo: v.location ?? null,
     id: v.id,
     name: v.name,
     cuisine: 'Food Truck',
@@ -152,6 +154,10 @@ export interface AppState {
   liveVendorById: Record<string, Vendor>;
   // the real backend order being paid for + its progress
   orderId: string | null;
+  // Distance verdict at order time: true = beyond the leave-now radius (Queue page shows the
+  // "you're far — watch your queue number" card), false = near, null = unknown (GPS denied /
+  // mock vendor) → the default tile renders, exactly as before this feature.
+  farFromVendor: boolean | null;
   orderBusy: boolean;
   orderError: string;
 }
@@ -288,6 +294,7 @@ const initialState: AppState = {
   liveVendors: null,
   liveVendorById: {},
   orderId: null,
+  farFromVendor: null,
   orderBusy: false,
   orderError: '',
 };
@@ -300,14 +307,14 @@ export const useStore = create<Store>((set, get) => ({
 
   // A cart change invalidates any order already created for the previous cart, so the next Pay
   // creates a fresh backend order (never re-uses a stale one → no wrong amount).
-  add: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 }, orderId: null, orderError: '' })),
+  add: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 }, orderId: null, farFromVendor: null, orderError: '' })),
   remove: (id) =>
     set((s) => {
       const cart = { ...s.cart };
       const n = (cart[id] ?? 0) - 1;
       if (n <= 0) delete cart[id];
       else cart[id] = n;
-      return { cart, orderId: null, orderError: '' };
+      return { cart, orderId: null, farFromVendor: null, orderError: '' };
     }),
 
   go: (screen) => set({ screen, queueSheet: false, rasaInfoOpen: false, couponOpen: false }),
@@ -319,7 +326,7 @@ export const useStore = create<Store>((set, get) => ({
       screen: 'vendor',
       vendorId: id,
       tab: 'Menu',
-      ...(switching ? { cart: {}, orderId: null, orderError: '' } : {}),
+      ...(switching ? { cart: {}, orderId: null, farFromVendor: null, orderError: '' } : {}),
     });
     // If this is a live vendor, load its real menu (real menuItem uuids) so the cart is orderable.
     if (get().liveVendorById[id]) {
@@ -409,7 +416,7 @@ export const useStore = create<Store>((set, get) => ({
   },
   doLogout: () => {
     api.clearTokens();
-    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, cart: {} });
+    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, farFromVendor: null, cart: {} });
   },
   // On boot, if the access token expired but a refresh token exists, refresh silently before deciding
   // whether to show the sign-in gate; then load live vendors when authed.
@@ -465,7 +472,18 @@ export const useStore = create<Store>((set, get) => ({
     try {
       let id = orderId;
       if (!id) {
-        const order = await api.createOrder({ vendorId, items, idempotencyKey: newIdemKey() });
+        // One-shot GPS at order time (null on deny/timeout). Send it even when far — the backend
+        // radius gate is authoritative; a far order simply joins the live board unscheduled. The
+        // far flag only decides which tile the Queue page shows.
+        const geo = await api.requestGeoLocation();
+        const vendorGeo = get().liveVendorById[vendorId]?.geo ?? null;
+        set({ farFromVendor: geo && vendorGeo ? isFarFromVendor(geo, vendorGeo) : null });
+        const order = await api.createOrder({
+          vendorId,
+          items,
+          idempotencyKey: newIdemKey(),
+          ...(geo ? { customerLocation: geo } : {}),
+        });
         id = order.id;
         set({ orderId: id });
       }

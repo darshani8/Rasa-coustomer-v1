@@ -13,7 +13,7 @@ const cardPath = 'M2 5h20v14H2zM2 10h20';
 const bagPath = 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4ZM3 6h18M16 10a4 4 0 0 1-8 0';
 
 export default function Queue() {
-  const { go, vendorId, qSec, cart, add, remove, liveV } = useStore((st) => ({
+  const { go, vendorId, qSec, cart, add, remove, liveV, farFromVendor } = useStore((st) => ({
     go: st.go,
     vendorId: st.vendorId,
     qSec: st.qSec,
@@ -21,6 +21,7 @@ export default function Queue() {
     add: st.add,
     remove: st.remove,
     liveV: st.liveVendorById[st.vendorId],
+    farFromVendor: st.farFromVendor,
   }));
 
   // Live vendors (real backend menu) are not in the mock catalogue — resolve them first, same
@@ -117,18 +118,34 @@ export default function Queue() {
             <div style={s("font:700 38px var(--display,'Space Grotesk');color:#3B2630;margin-top:18px;line-height:1;letter-spacing:1px")}>{qTime}</div>
             <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:6px")}>minutes remaining</div>
           </div>
-          <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:16px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between')}>
-            <div style={s('display:flex;align-items:center;justify-content:space-between;width:100%')}>
-              <div style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px")}>Leave in</div>
-              <div style={s('width:30px;height:30px;border-radius:50%;background:var(--psoft,#F7E9EC);display:flex;align-items:center;justify-content:center')}>
-                <Icon size={16} stroke="var(--p,#7D1535)" w={2.2} round d={carPath} />
+          {farFromVendor === true ? (
+            /* Beyond the leave-now radius: the backend makes no travel estimate for this order,
+               so guide the customer to self-pace off the live queue number instead. */
+            <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:16px;display:flex;flex-direction:column;align-items:flex-start')}>
+              <div style={s('display:flex;align-items:center;justify-content:space-between;width:100%')}>
+                <div style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px")}>Travel tracking off</div>
+                <div style={s('width:30px;height:30px;border-radius:50%;background:#F4EEE7;display:flex;align-items:center;justify-content:center;flex-shrink:0')}>
+                  <Icon size={16} stroke="#B0A9BC" w={2.2} round d={carPath} />
+                </div>
+              </div>
+              <div style={s("font:500 10.5px 'Inter';color:#6F6A7D;margin-top:12px;line-height:1.5")}>
+                You&rsquo;re far from the truck &mdash; watch your queue number and reach <b style={s('color:#3B2630')}>5&ndash;10 min</b> before your turn.
               </div>
             </div>
-            <div style={s('margin-top:auto')}>
-              <div style={s("font:700 24px var(--display,'Space Grotesk');color:#3B2630;line-height:1;margin-top:18px")}>{leaveBigLabel}</div>
-              <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:5px")}>{leaveSub}</div>
+          ) : (
+            <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:16px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between')}>
+              <div style={s('display:flex;align-items:center;justify-content:space-between;width:100%')}>
+                <div style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px")}>Leave in</div>
+                <div style={s('width:30px;height:30px;border-radius:50%;background:var(--psoft,#F7E9EC);display:flex;align-items:center;justify-content:center')}>
+                  <Icon size={16} stroke="var(--p,#7D1535)" w={2.2} round d={carPath} />
+                </div>
+              </div>
+              <div style={s('margin-top:auto')}>
+                <div style={s("font:700 24px var(--display,'Space Grotesk');color:#3B2630;line-height:1;margin-top:18px")}>{leaveBigLabel}</div>
+                <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:5px")}>{leaveSub}</div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:20px 18px;margin-top:14px;position:relative')}>
