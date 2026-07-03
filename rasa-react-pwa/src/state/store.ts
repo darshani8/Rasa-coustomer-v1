@@ -166,6 +166,13 @@ export interface AppState {
   // ORDER_PAID handler schedules asynchronously, hence the short bounded retry). Null while
   // unknown → the Queue page falls back to its demo countdown.
   schedulingPlan: { cookStartAt: string; leaveByAt: string; instruction: string } | null;
+  // Live queue tracking (polled by the Queue screen every few seconds while it is open). Null
+  // while unknown / mock vendors → the Queue page falls back to its demo numbers.
+  queueStatus: import('@/api').QueueStatus | null;
+  // When queueStatus was fetched (epoch ms) — the wait tile counts down from fetch time.
+  queueStatusAt: number | null;
+  // The one-shot GPS captured at order time; used to show the live distance to the vendor.
+  customerGeo: { lat: number; lng: number } | null;
   orderBusy: boolean;
   orderError: string;
 }
@@ -196,6 +203,8 @@ export interface AppActions {
   bootSession: () => Promise<void>;
   loadVendors: () => Promise<void>;
   placeOrderAndPay: () => Promise<void>;
+  // Poll the live queue status for the current order (no-op without a real order).
+  pollQueueStatus: () => Promise<void>;
   // join queue
   openQueueSheet: () => void;
   closeQueueSheet: () => void;
@@ -306,6 +315,9 @@ const initialState: AppState = {
   orderId: null,
   farFromVendor: null,
   schedulingPlan: null,
+  queueStatus: null,
+  queueStatusAt: null,
+  customerGeo: null,
   orderBusy: false,
   orderError: '',
 };
@@ -318,14 +330,14 @@ export const useStore = create<Store>((set, get) => ({
 
   // A cart change invalidates any order already created for the previous cart, so the next Pay
   // creates a fresh backend order (never re-uses a stale one → no wrong amount).
-  add: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 }, orderId: null, farFromVendor: null, schedulingPlan: null, orderError: '' })),
+  add: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 }, orderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, orderError: '' })),
   remove: (id) =>
     set((s) => {
       const cart = { ...s.cart };
       const n = (cart[id] ?? 0) - 1;
       if (n <= 0) delete cart[id];
       else cart[id] = n;
-      return { cart, orderId: null, farFromVendor: null, schedulingPlan: null, orderError: '' };
+      return { cart, orderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, orderError: '' };
     }),
 
   go: (screen) => set({ screen, queueSheet: false, rasaInfoOpen: false, couponOpen: false }),
@@ -337,7 +349,7 @@ export const useStore = create<Store>((set, get) => ({
       screen: 'vendor',
       vendorId: id,
       tab: 'Menu',
-      ...(switching ? { cart: {}, orderId: null, farFromVendor: null, schedulingPlan: null, orderError: '' } : {}),
+      ...(switching ? { cart: {}, orderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, orderError: '' } : {}),
     });
     // If this is a live vendor, load its real menu (real menuItem uuids) so the cart is orderable.
     if (get().liveVendorById[id]) {
@@ -487,7 +499,7 @@ export const useStore = create<Store>((set, get) => ({
     // logout() captures the tokens before clearTokens() below removes them locally.
     void api.logout().catch(() => {});
     api.clearTokens();
-    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, billOrderId: null, farFromVendor: null, schedulingPlan: null, cart: {} });
+    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, billOrderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, customerGeo: null, cart: {} });
   },
   // On boot, if the access token expired but a refresh token exists, refresh silently before deciding
   // whether to show the sign-in gate; then load live vendors when authed.
@@ -548,7 +560,7 @@ export const useStore = create<Store>((set, get) => ({
         // far flag only decides which tile the Queue page shows.
         const geo = await api.requestGeoLocation();
         const vendorGeo = get().liveVendorById[vendorId]?.geo ?? null;
-        set({ farFromVendor: geo && vendorGeo ? isFarFromVendor(geo, vendorGeo) : null });
+        set({ farFromVendor: geo && vendorGeo ? isFarFromVendor(geo, vendorGeo) : null, customerGeo: geo });
         const order = await api.createOrder({
           vendorId,
           items,
@@ -585,6 +597,19 @@ export const useStore = create<Store>((set, get) => ({
       });
     } catch (e) {
       set({ orderBusy: false, orderError: (e as Error).message || 'Could not place the order.' });
+    }
+  },
+
+  // Live tracking poll for the Queue screen. Stale-response safe: the snapshot is dropped if the
+  // order changed while the request was in flight. Transient failures keep the last snapshot.
+  pollQueueStatus: async () => {
+    const { orderId } = get();
+    if (!orderId) return;
+    try {
+      const status = await api.getQueueStatus(orderId);
+      if (get().orderId === orderId) set({ queueStatus: status, queueStatusAt: Date.now() });
+    } catch {
+      /* keep the previous snapshot; the next poll retries */
     }
   },
 

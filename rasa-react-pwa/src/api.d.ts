@@ -68,6 +68,21 @@ export function createOrder(input: {
 }): Promise<BackendOrder>;
 export function getOrder(id: string): Promise<BackendOrder>;
 
+/** Live queue tracking for the queue screen (GET /orders/:id/queue-status). */
+export interface QueueStatus {
+  orderId: string;
+  orderNumber: string;
+  status: string;
+  position: number | null;
+  aheadCount: number | null;
+  nowServingOrderNumber: string | null;
+  estimatedWaitMinutes: number | null;
+  zone: 'queue' | 'payment' | 'collection' | 'done' | 'cancelled';
+  payWindowExpiresAtMs: number | null;
+  vendorLocation: { lat: number; lng: number } | null;
+}
+export function getQueueStatus(orderId: string): Promise<QueueStatus>;
+
 /** Browser GPS (5s timeout); resolves null when denied or unavailable. */
 export function requestGeoLocation(): Promise<{ lat: number; lng: number } | null>;
 

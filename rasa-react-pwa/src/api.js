@@ -377,6 +377,15 @@ export async function getOrder(id) {
 }
 
 /**
+ * GET /orders/:id/queue-status
+ * The live tracking read for the queue screen: { orderNumber, position, aheadCount,
+ * nowServingOrderNumber, estimatedWaitMinutes, zone, payWindowExpiresAtMs, vendorLocation }.
+ */
+export async function getQueueStatus(orderId) {
+  return request(`/orders/${orderId}/queue-status`);
+}
+
+/**
  * POST /orders/:id/cancel
  * Returns 202 { accepted, message }
  */
