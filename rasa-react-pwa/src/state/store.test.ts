@@ -4,7 +4,7 @@ import { useStore } from './store';
 const initial = useStore.getState();
 const reset = () =>
   useStore.setState(
-    { screen: 'home', cart: {}, billAmt: 0, billOffer: null, billPay: 'gpay', parkSlot: null, vendorId: 'artiste' },
+    { screen: 'home', cart: {}, billAmt: 0, billOffer: null, billPay: 'gpay', vendorId: 'artiste' },
     false,
   );
 

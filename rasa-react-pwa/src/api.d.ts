@@ -59,16 +59,7 @@ export function createOrder(input: {
   items: Array<{ menuItemId: string; quantity: number }>;
   idempotencyKey: string;
   customerLocation?: { lat: number; lng: number };
-  slotStartMs?: number;
 }): Promise<BackendOrder>;
-
-export interface BackendSlotWindow {
-  startMs: number;
-  endMs: number;
-  status: 'available' | 'limited' | 'full' | 'too_soon';
-  bookable: boolean;
-}
-export function getSlots(vendorId: string): Promise<{ windows: BackendSlotWindow[] }>;
 export function getOrder(id: string): Promise<BackendOrder>;
 
 export function paiseToRupees(paise: string | number | null | undefined): number;
