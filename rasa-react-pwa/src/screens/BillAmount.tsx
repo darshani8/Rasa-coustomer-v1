@@ -69,7 +69,7 @@ export default function BillAmount() {
         <Keypad onKey={billKey} />
       </div>
 
-      <div style={s('padding:8px 18px 18px')}>
+      <div style={s('position:sticky;bottom:0;z-index:45;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:10px 18px 16px')}>
         {canPay ? (
           <button
             onClick={billProceed}

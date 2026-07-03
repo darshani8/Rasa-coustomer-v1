@@ -23,7 +23,7 @@ export default function Success() {
   const payName = orderMethodName(payMethod);
 
   return (
-    <div style={s('animation:rasaFade .35s ease;padding:0 22px 32px')}>
+    <div style={s('animation:rasaFade .35s ease;padding:0 22px 0;display:flex;flex-direction:column;min-height:100%')}>
       <div style={s('display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:40px')}>
         <div style={s('width:84px;height:84px;border-radius:50%;background:#E4F4EC;display:flex;align-items:center;justify-content:center')}>
           <div style={s('width:58px;height:58px;border-radius:50%;background:#2F9E6E;display:flex;align-items:center;justify-content:center')}>
@@ -69,14 +69,16 @@ export default function Success() {
         </span>
       </div>
 
-      <button
-        onClick={() => go('queue')}
-        style={s('width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13.5px var(--display,"Space Grotesk");letter-spacing:.3px;cursor:pointer;margin-top:22px;display:flex;align-items:center;justify-content:center;gap:8px')}
-      >
-        Track queue status <span>→</span>
-      </button>
-      <div style={s('text-align:center;margin-top:14px')}>
-        <span onClick={() => go('home')} style={s("font:600 12px 'Inter';color:#9A93A6;cursor:pointer")}>Back to home</span>
+      <div style={s('position:sticky;bottom:0;z-index:45;margin:auto -22px 0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px')}>
+        <button
+          onClick={() => go('queue')}
+          style={s('width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13.5px var(--display,"Space Grotesk");letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px')}
+        >
+          Track queue status <span>→</span>
+        </button>
+        <div style={s('text-align:center;margin-top:10px')}>
+          <span onClick={() => go('home')} style={s("font:600 12px 'Inter';color:#9A93A6;cursor:pointer")}>Back to home</span>
+        </div>
       </div>
     </div>
   );
