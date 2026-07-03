@@ -309,11 +309,9 @@ export default function Vendor() {
         )}
       </div>
 
-      {/* spacer: reserves scroll room beneath the fixed floating Join-queue button */}
-      <div style={s('height:74px;flex-shrink:0;margin-top:8px')} />
-
-      {/* fixed floating dock */}
-      <div style={s('position:absolute;left:0;right:0;bottom:0;z-index:35;background:rgba(251,250,247,.97);backdrop-filter:blur(12px);border-top:1px solid #EFE9DF;padding:13px 18px 17px;display:flex;gap:10px')}>
+      {/* frozen action dock: sticky pins it to the viewport bottom while the page scrolls
+          (absolute would scroll away with the content inside the .app-scroll container) */}
+      <div style={s('position:sticky;bottom:0;left:0;right:0;z-index:35;margin-top:auto;background:rgba(251,250,247,.97);backdrop-filter:blur(12px);border-top:1px solid #EFE9DF;padding:13px 18px 17px;display:flex;gap:10px')}>
         <button
           onClick={parkOrder}
           style={s('flex:0 0 auto;background:none;color:var(--p,#7D1535);border:1.5px solid var(--p,#7D1535);border-radius:var(--radM,14px);padding:14px 18px;font:700 13px var(--display,"Space Grotesk");letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap')}

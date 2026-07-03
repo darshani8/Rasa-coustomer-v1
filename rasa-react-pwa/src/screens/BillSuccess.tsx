@@ -19,7 +19,7 @@ export default function BillSuccess() {
   const coins = rasaCoinsEarned(payable);
 
   return (
-    <div style={s('animation:rasaFade .35s ease;display:flex;flex-direction:column;min-height:100%;padding:0 22px 28px')}>
+    <div style={s('animation:rasaFade .35s ease;display:flex;flex-direction:column;min-height:100%;padding:0 22px 0')}>
       <div style={s('flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-top:20px')}>
         <div style={s('width:78px;height:78px;border-radius:50%;background:#E8F3EA;display:flex;align-items:center;justify-content:center;margin-bottom:20px')}>
           <div style={s('width:56px;height:56px;border-radius:50%;background:#2F8F4E;display:flex;align-items:center;justify-content:center')}>
@@ -52,7 +52,7 @@ export default function BillSuccess() {
         </div>
       </div>
 
-      <div style={s('display:flex;gap:11px;margin-top:24px')}>
+      <div style={s('position:sticky;bottom:0;z-index:45;display:flex;gap:11px;margin:24px -22px 0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 22px 16px')}>
         <button
           onClick={() => go('orders')}
           style={s('flex:1;background:none;color:var(--p,#7D1535);border:1.5px solid var(--p,#7D1535);border-radius:14px;padding:15px 0;font:700 13px var(--display,"Space Grotesk");cursor:pointer')}

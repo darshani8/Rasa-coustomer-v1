@@ -17,7 +17,7 @@ export default function Failed() {
   const moneyTotal = fmt(bill.total);
 
   return (
-    <div style={s('animation:rasaFade .35s ease;padding:0 0 32px')}>
+    <div style={s('animation:rasaFade .35s ease;padding:0 0 0;display:flex;flex-direction:column;min-height:100%')}>
       <div style={s('display:flex;align-items:center;gap:12px;padding:14px 18px 4px')}>
         <button
           onClick={() => go('pay')}
@@ -55,22 +55,25 @@ export default function Failed() {
           </div>
         </div>
 
+
+        <div style={s('display:flex;align-items:center;justify-content:center;gap:7px;margin-top:24px;cursor:pointer')}>
+          <Icon size={16} stroke="var(--p,#7D1535)" w={2.1} round d={headsetPath} />
+          <span style={s("font:600 12.5px 'Inter';color:var(--p,#7D1535)")}>Contact Support</span>
+        </div>
+      </div>
+      <div style={s('position:sticky;bottom:0;left:0;right:0;z-index:45;margin-top:auto;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px')}>
         <button
           onClick={() => go('pay')}
-          style={s('width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13px var(--display,"Space Grotesk");letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-top:26px;display:flex;align-items:center;justify-content:center;gap:9px')}
+          style={s('width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13px var(--display,"Space Grotesk");letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px')}
         >
           <Icon size={16} stroke="#fff" w={2.4} round d={retryPath} /> Retry Payment
         </button>
         <button
           onClick={() => go('pay')}
-          style={s('width:100%;background:var(--pchip,#F1DEE3);color:var(--p,#7D1535);border:none;border-radius:var(--radL,16px);padding:16px;font:700 12.5px var(--display,"Space Grotesk");letter-spacing:.8px;text-transform:uppercase;cursor:pointer;margin-top:12px')}
+          style={s('width:100%;background:var(--pchip,#F1DEE3);color:var(--p,#7D1535);border:none;border-radius:var(--radL,16px);padding:16px;font:700 12.5px var(--display,"Space Grotesk");letter-spacing:.8px;text-transform:uppercase;cursor:pointer;margin-top:10px')}
         >
           Change Payment Method
         </button>
-        <div style={s('display:flex;align-items:center;justify-content:center;gap:7px;margin-top:24px;cursor:pointer')}>
-          <Icon size={16} stroke="var(--p,#7D1535)" w={2.1} round d={headsetPath} />
-          <span style={s("font:600 12.5px 'Inter';color:var(--p,#7D1535)")}>Contact Support</span>
-        </div>
       </div>
     </div>
   );
