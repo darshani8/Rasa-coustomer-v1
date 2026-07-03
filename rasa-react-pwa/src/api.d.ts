@@ -53,6 +53,12 @@ export interface BackendOrder {
   status: string;
   totalPaise: string;
   position: number | null;
+  /** Ready-on-arrival plan (ISO timestamps); null until the paid order is scheduled. */
+  scheduling?: {
+    cookStartAt: string;
+    leaveByAt: string;
+    instruction: 'leave_now' | 'leave_by' | 'ready_on_arrival';
+  } | null;
 }
 export function createOrder(input: {
   vendorId: string;

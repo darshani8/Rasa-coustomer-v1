@@ -158,6 +158,10 @@ export interface AppState {
   // "you're far — watch your queue number" card), false = near, null = unknown (GPS denied /
   // mock vendor) → the default tile renders, exactly as before this feature.
   farFromVendor: boolean | null;
+  // The REAL ready-on-arrival plan from the backend (fetched after payment confirms; the
+  // ORDER_PAID handler schedules asynchronously, hence the short bounded retry). Null while
+  // unknown → the Queue page falls back to its demo countdown.
+  schedulingPlan: { cookStartAt: string; leaveByAt: string; instruction: string } | null;
   orderBusy: boolean;
   orderError: string;
 }
@@ -295,6 +299,7 @@ const initialState: AppState = {
   liveVendorById: {},
   orderId: null,
   farFromVendor: null,
+  schedulingPlan: null,
   orderBusy: false,
   orderError: '',
 };
@@ -307,14 +312,14 @@ export const useStore = create<Store>((set, get) => ({
 
   // A cart change invalidates any order already created for the previous cart, so the next Pay
   // creates a fresh backend order (never re-uses a stale one → no wrong amount).
-  add: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 }, orderId: null, farFromVendor: null, orderError: '' })),
+  add: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 }, orderId: null, farFromVendor: null, schedulingPlan: null, orderError: '' })),
   remove: (id) =>
     set((s) => {
       const cart = { ...s.cart };
       const n = (cart[id] ?? 0) - 1;
       if (n <= 0) delete cart[id];
       else cart[id] = n;
-      return { cart, orderId: null, farFromVendor: null, orderError: '' };
+      return { cart, orderId: null, farFromVendor: null, schedulingPlan: null, orderError: '' };
     }),
 
   go: (screen) => set({ screen, queueSheet: false, rasaInfoOpen: false, couponOpen: false }),
@@ -326,7 +331,7 @@ export const useStore = create<Store>((set, get) => ({
       screen: 'vendor',
       vendorId: id,
       tab: 'Menu',
-      ...(switching ? { cart: {}, orderId: null, farFromVendor: null, orderError: '' } : {}),
+      ...(switching ? { cart: {}, orderId: null, farFromVendor: null, schedulingPlan: null, orderError: '' } : {}),
     });
     // If this is a live vendor, load its real menu (real menuItem uuids) so the cart is orderable.
     if (get().liveVendorById[id]) {
@@ -416,7 +421,7 @@ export const useStore = create<Store>((set, get) => ({
   },
   doLogout: () => {
     api.clearTokens();
-    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, farFromVendor: null, cart: {} });
+    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, farFromVendor: null, schedulingPlan: null, cart: {} });
   },
   // On boot, if the access token expired but a refresh token exists, refresh silently before deciding
   // whether to show the sign-in gate; then load live vendors when authed.
@@ -488,10 +493,25 @@ export const useStore = create<Store>((set, get) => ({
         set({ orderId: id });
       }
       set({ orderBusy: false });
+      const fetchPlan = async (orderId2: string): Promise<void> => {
+        for (let i = 0; i < 5; i += 1) {
+          await new Promise((r) => setTimeout(r, 1500));
+          const order = await api.getOrder(orderId2).catch(() => null);
+          if (order && get().orderId === orderId2) {
+            if (order.scheduling) {
+              set({ schedulingPlan: order.scheduling });
+              return;
+            }
+          }
+        }
+      };
       await payForOrder({
         orderId: id,
         description: 'Rasa order',
-        onConfirmed: () => get().go('success'),
+        onConfirmed: () => {
+          void fetchPlan(id!);
+          get().go('success');
+        },
         onUnavailable: () =>
           set({ orderError: 'Online payment is not configured on the server — pay at the counter.' }),
         onError: (m) => set({ orderError: m }),
