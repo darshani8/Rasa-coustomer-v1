@@ -55,3 +55,43 @@ export function leaveByText(startTime: string): string {
   const mins = (parseTime(startTime) - 10 + 1440) % 1440;
   return `Leave by ~${fmtTime(mins)} to arrive on time`;
 }
+
+// ── live backend windows → the same VM the sheet renders ─────────────────────
+// The vendor's real slot rules (duration/capacity) arrive as coarse windows from GET /slots.
+// id = String(startMs) so the chosen slot maps straight onto createOrder({ slotStartMs }).
+export interface LiveWindow {
+  startMs: number;
+  endMs: number;
+  status: 'available' | 'limited' | 'full' | 'too_soon';
+  bookable: boolean;
+}
+
+const fmtClock = (ms: number): string => {
+  const d = new Date(ms);
+  let h = d.getHours();
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${String(d.getMinutes()).padStart(2, '0')} ${ap}`;
+};
+
+export function windowsToSlots(windows: LiveWindow[], day: ParkDay): ParkSlotVM[] {
+  const now = new Date();
+  const target = new Date(now);
+  if (day === 'tomorrow') target.setDate(target.getDate() + 1);
+  const sameDay = (ms: number) => {
+    const d = new Date(ms);
+    return d.getFullYear() === target.getFullYear() && d.getMonth() === target.getMonth() && d.getDate() === target.getDate();
+  };
+  return windows
+    .filter((w) => sameDay(w.startMs))
+    .map((w) => {
+      const state: SlotState = w.bookable ? (w.status === 'limited' ? 'limited' : 'open') : 'full';
+      return {
+        id: String(w.startMs),
+        label: `${fmtClock(w.startMs)} – ${fmtClock(w.endMs)}`,
+        startTime: fmtClock(w.startMs),
+        state,
+        isLimited: state === 'limited',
+      };
+    });
+}

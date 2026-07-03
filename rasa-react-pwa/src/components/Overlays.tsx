@@ -3,7 +3,7 @@ import { useStore } from '@/state/store';
 import { getVendor } from '@/data';
 import { fmt } from '@/lib/money';
 import { cartCount, cartSubtotal } from '@/state/selectors';
-import { buildSlots, leaveByText } from '@/lib/parkSlots';
+import { buildSlots, windowsToSlots, leaveByText } from '@/lib/parkSlots';
 import { s } from '@/lib/style';
 import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
@@ -62,8 +62,12 @@ function ParkSheet() {
     remove,
     parkConfirm,
     openQueueSheet,
+    liveSlotWindows,
+    liveV,
   } = useStore((st) => ({
     vendorId: st.vendorId,
+    liveSlotWindows: st.liveSlotWindows,
+    liveV: st.liveVendorById[st.vendorId],
     cart: st.cart,
     parkDay: st.parkDay,
     parkSlot: st.parkSlot,
@@ -76,10 +80,15 @@ function ParkSheet() {
     openQueueSheet: st.openQueueSheet,
   }));
 
-  const v = getVendor(vendorId);
+  // Live vendors resolve from the backend cache (mock catalogue otherwise) — same as Queue.tsx.
+  const v = liveV ?? getVendor(vendorId);
   const subtotal = cartSubtotal(v, cart);
   const count = cartCount(cart);
-  const slots = useMemo(() => buildSlots(parkDay), [parkDay]);
+  // Real vendor slot windows when loaded (updates every time the sheet opens); demo grid otherwise.
+  const slots = useMemo(
+    () => (liveSlotWindows ? windowsToSlots(liveSlotWindows, parkDay) : buildSlots(parkDay)),
+    [liveSlotWindows, parkDay]
+  );
   const selectedSlot = slots.find((s) => s.id === parkSlot) || null;
   const canConfirm = selectedSlot !== null && count > 0;
 
