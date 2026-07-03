@@ -43,6 +43,7 @@ export interface BackendMenuItem {
   pricePaise: string;
   prepMinutes: number;
   isAvailable: boolean;
+  category?: string | null;
 }
 export function listMenu(vendorId: string): Promise<{ items: BackendMenuItem[] }>;
 
