@@ -111,6 +111,9 @@ export interface AppState {
   couponOpen: boolean;
   billCoupon: string | null;
   billCouponInput: string;
+  // The backend bill order created by confirmBillPay. Re-taps of "Pay now" reuse it (never a
+  // second charge); any amount/offer edit resets it so a new order is created for the new total.
+  billOrderId: string | null;
   // order history
   orderFilter: OrderFilter;
   orderSort: OrderSort;
@@ -265,6 +268,7 @@ const initialState: AppState = {
   couponOpen: false,
   billCoupon: null,
   billCouponInput: '',
+  billOrderId: null,
   orderFilter: 'all',
   orderSort: 'recent',
   sortOpen: false,
@@ -479,8 +483,11 @@ export const useStore = create<Store>((set, get) => ({
     }
   },
   doLogout: () => {
+    // Revoke the refresh token server-side (fire-and-forget — the UI never waits on the network);
+    // logout() captures the tokens before clearTokens() below removes them locally.
+    void api.logout().catch(() => {});
     api.clearTokens();
-    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, farFromVendor: null, schedulingPlan: null, cart: {} });
+    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, billOrderId: null, farFromVendor: null, schedulingPlan: null, cart: {} });
   },
   // On boot, if the access token expired but a refresh token exists, refresh silently before deciding
   // whether to show the sign-in gate; then load live vendors when authed.
@@ -586,7 +593,7 @@ export const useStore = create<Store>((set, get) => ({
   closeQueueSheet: () => set({ queueSheet: false }),
   confirmJoinQueue: () => set({ queueSheet: false, screen: 'queue' }),
 
-  payBillStart: () => set({ screen: 'billamount', billAmt: 0, billOffer: null, rasaInfoOpen: false, couponOpen: false }),
+  payBillStart: () => set({ screen: 'billamount', billAmt: 0, billOffer: null, billOrderId: null, rasaInfoOpen: false, couponOpen: false }),
   billKey: (k) =>
     set((s) => {
       let a = s.billAmt;
@@ -594,43 +601,55 @@ export const useStore = create<Store>((set, get) => ({
       else if (k === '00') a = a * 100;
       else a = a * 10 + Number(k);
       if (a > 9999999) return {};
-      return { billAmt: a };
+      // A different amount means a different order: drop any bill order created for the old total.
+      return { billAmt: a, billOrderId: null };
     }),
   billProceed: () => {
     if (get().billAmt > 0) set({ screen: 'billoffers' });
   },
-  applyBillOffer: (id) => set((s) => ({ billOffer: s.billOffer === id ? null : id })),
+  applyBillOffer: (id) =>
+    set((s) => ({ billOffer: s.billOffer === id ? null : id, billOrderId: null })),
   selectBillPay: (id) => set({ billPay: id, screen: 'billsummary' }),
   // Pay the counter bill for real: create a kind='bill' order for the exact payable the summary
   // shows (rupees → integer paise) and run the standard Razorpay flow. Mock vendors (no UUID)
   // keep the demo behavior. UI is untouched — success still lands on the billsuccess screen.
   confirmBillPay: async () => {
-    const { vendorId, billAmt, billOffer, authed } = get();
+    const { vendorId, billAmt, billOffer, authed, orderBusy } = get();
+    if (orderBusy) return; // a tap is already in flight — never start a second bill order
     const payableRupees = billPayable(billAmt, billOffer);
     const isLiveVendor = UUID_RE.test(vendorId);
     if (!authed || !isLiveVendor || payableRupees <= 0) {
       set({ screen: 'billsuccess', rasaInfoOpen: false, couponOpen: false });
       return;
     }
+    // Busy stays true until Checkout opens (or fails): the button is disabled for the whole
+    // create-order + gateway-poll window, so a double-tap cannot double-charge.
     set({ orderBusy: true, orderError: '' });
     try {
-      const order = await api.createBillOrder({
-        vendorId,
-        amountPaise: String(Math.round(payableRupees * 100)),
-        idempotencyKey: newIdemKey(),
-      });
-      set({ orderBusy: false });
+      let id = get().billOrderId;
+      if (!id) {
+        const order = await api.createBillOrder({
+          vendorId,
+          amountPaise: String(Math.round(payableRupees * 100)),
+          idempotencyKey: newIdemKey(),
+        });
+        id = order.id;
+        set({ billOrderId: id });
+      }
       await payForOrder({
-        orderId: order.id,
+        orderId: id,
         description: 'Rasa bill payment',
-        onConfirmed: () => set({ screen: 'billsuccess', rasaInfoOpen: false, couponOpen: false }),
+        onConfirmed: () =>
+          set({ billOrderId: null, screen: 'billsuccess', rasaInfoOpen: false, couponOpen: false }),
         onUnavailable: () =>
           set({ orderError: 'Online payment is not configured on the server — pay at the counter.' }),
         onError: (m) => set({ orderError: m }),
         onDismiss: () => {},
       });
     } catch (e) {
-      set({ orderBusy: false, orderError: (e as Error).message || 'Could not start the bill payment.' });
+      set({ orderError: (e as Error).message || 'Could not start the bill payment.' });
+    } finally {
+      set({ orderBusy: false });
     }
   },
   setBillCouponInput: (v) => set({ billCouponInput: v }),

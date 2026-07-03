@@ -10,16 +10,17 @@ const infoPath = 'M12 16v-4M12 8h.01';
 const scanPath = 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2';
 
 export default function BillAmount() {
-  const { go, vendorId, billAmt, billKey, billProceed, openRasaInfo } = useStore((st) => ({
+  const { go, vendorId, billAmt, billKey, billProceed, openRasaInfo, liveVendor } = useStore((st) => ({
     go: st.go,
     vendorId: st.vendorId,
     billAmt: st.billAmt,
     billKey: st.billKey,
     billProceed: st.billProceed,
     openRasaInfo: st.openRasaInfo,
+    liveVendor: st.liveVendorById[st.vendorId],
   }));
 
-  const vendor = getVendor(vendorId);
+  const vendor = liveVendor ?? getVendor(vendorId);
   const canPay = billAmt > 0;
   const big = billAmt === 0 ? '0.00' : billAmt.toLocaleString('en-IN');
 

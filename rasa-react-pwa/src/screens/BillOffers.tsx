@@ -22,6 +22,7 @@ export default function BillOffers() {
     openRasaInfo,
     goBillSummary,
     goAllOffers,
+    liveVendor,
   } = useStore((st) => ({
     go: st.go,
     vendorId: st.vendorId,
@@ -32,9 +33,10 @@ export default function BillOffers() {
     openRasaInfo: st.openRasaInfo,
     goBillSummary: () => st.go('billsummary'),
     goAllOffers: () => st.go('alloffers'),
+    liveVendor: st.liveVendorById[st.vendorId],
   }));
 
-  const vendor = getVendor(vendorId);
+  const vendor = liveVendor ?? getVendor(vendorId);
   const discount = billDiscount(billOffer, billAmt);
   const payable = billPayable(billAmt, billOffer);
   const payLabel = billMethodName(billPay);
