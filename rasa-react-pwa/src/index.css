@@ -150,8 +150,10 @@ img { display: block; max-width: 100%; }
   position: relative;
   width: 100%;
   max-width: var(--app-max-w);
-  min-height: calc(100vh - var(--nav-h));
-  min-height: calc(100dvh - var(--nav-h));
+  /* Fixed (not min-) height: the column must never grow past the viewport, or the WINDOW
+     scrolls instead of .app-scroll and every sticky bottom CTA stops pinning. */
+  height: calc(100vh - var(--nav-h));
+  height: calc(100dvh - var(--nav-h));
   margin-inline: auto;
   background: var(--bg);
   display: flex;
