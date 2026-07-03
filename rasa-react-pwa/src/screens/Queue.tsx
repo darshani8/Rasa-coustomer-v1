@@ -13,17 +13,21 @@ const cardPath = 'M2 5h20v14H2zM2 10h20';
 const bagPath = 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4ZM3 6h18M16 10a4 4 0 0 1-8 0';
 
 export default function Queue() {
-  const { go, vendorId, qSec, cart, add, remove } = useStore((st) => ({
+  const { go, vendorId, qSec, cart, add, remove, liveV } = useStore((st) => ({
     go: st.go,
     vendorId: st.vendorId,
     qSec: st.qSec,
     cart: st.cart,
     add: st.add,
     remove: st.remove,
+    liveV: st.liveVendorById[st.vendorId],
   }));
 
-  const v = getVendor(vendorId);
+  // Live vendors (real backend menu) are not in the mock catalogue — resolve them first, same
+  // as Vendor.tsx, or the tracker shows a fallback vendor's items instead of the real order.
+  const v = liveV ?? getVendor(vendorId);
   const subtotal = cartSubtotal(v, cart);
+  const orderedItems = v.items.filter((i) => (cart[i.id] ?? 0) > 0).map((i) => ({ ...i, qty: cart[i.id]! }));
   const groups = menuGroups(v, cart);
   const bill = orderBill(subtotal);
 
@@ -156,6 +160,29 @@ export default function Queue() {
             </div>
           ))}
         </div>
+
+        {orderedItems.length > 0 && (
+          <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:16px 18px;margin-top:14px')}>
+            <div style={s('display:flex;align-items:center;gap:8px;margin-bottom:12px')}>
+              <div style={s('width:26px;height:26px;border-radius:8px;background:var(--psoft,#F7E9EC);display:flex;align-items:center;justify-content:center;flex-shrink:0')}>
+                <Icon size={15} stroke="var(--p,#7D1535)" w={2.2} round d={bagPath} />
+              </div>
+              <div style={s("font:700 13px var(--display,'Space Grotesk');color:#3B2630")}>Your order</div>
+              <span style={s("margin-left:auto;font:600 10px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px")}>{v.name}</span>
+            </div>
+            {orderedItems.map((oi) => (
+              <div key={oi.id} style={s('display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed #F0EAE0')}>
+                <span style={s("font:700 11px 'Inter';color:var(--p,#7D1535);background:var(--psoft,#F7E9EC);border:1px solid var(--pborder,#EAC9D1);border-radius:7px;padding:2px 7px;flex-shrink:0")}>{oi.qty}×</span>
+                <span style={s("font:600 12.5px 'Inter';color:#3B2630;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>{oi.name}</span>
+                <span style={s("font:700 12.5px var(--display,'Space Grotesk');color:#3B2630;flex-shrink:0")}>{fmt(oi.price * oi.qty)}</span>
+              </div>
+            ))}
+            <div style={s('display:flex;align-items:center;justify-content:space-between;padding-top:11px')}>
+              <span style={s("font:600 11.5px 'Inter';color:#9A93A6")}>Item total</span>
+              <span style={s("font:700 14px var(--display,'Space Grotesk');color:var(--p,#7D1535)")}>{fmt(subtotal)}</span>
+            </div>
+          </div>
+        )}
 
         <div style={s('display:flex;align-items:baseline;justify-content:space-between;margin-top:22px;margin-bottom:12px')}>
           <div style={s("font:700 14px var(--display,'Space Grotesk');color:#3B2630")}>Add more from {v.name}</div>
