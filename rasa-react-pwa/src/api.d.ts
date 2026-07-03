@@ -71,4 +71,7 @@ export function getOrder(id: string): Promise<BackendOrder>;
 /** Browser GPS (5s timeout); resolves null when denied or unavailable. */
 export function requestGeoLocation(): Promise<{ lat: number; lng: number } | null>;
 
+export function getGoogleConfig(): Promise<{ clientId: string | null }>;
+export function googleLogin(credential: string): Promise<{ token: string }>;
+
 export function paiseToRupees(paise: string | number | null | undefined): number;
