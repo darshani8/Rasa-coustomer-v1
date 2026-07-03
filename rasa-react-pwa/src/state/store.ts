@@ -66,7 +66,9 @@ function shapeItem(m: BackendMenuItem): MenuItem {
     name: m.name,
     desc: `Prep ${m.prepMinutes} min`,
     price: Math.round(Number(m.pricePaise) / 100),
-    cat: 'Menu',
+    // Real food category from the backend (Veg / Non-veg / Breakfast / ...) so the menu renders
+    // in its true sections instead of one flat "Menu" group.
+    cat: m.category || 'Menu',
     img: PLACEHOLDER_IMG,
   };
 }
