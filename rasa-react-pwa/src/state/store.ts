@@ -14,6 +14,7 @@ import {
   type OfferFilter,
   type Vendor,
 } from '@/data';
+import { billPayable } from '@/lib/money';
 import type { BillOfferId } from '@/lib/money';
 import * as api from '@/api';
 import type { BackendMenuItem, BackendVendor } from '@/api';
@@ -202,7 +203,7 @@ export interface AppActions {
   billProceed: () => void;
   applyBillOffer: (id: BillOfferId) => void;
   selectBillPay: (id: string) => void;
-  confirmBillPay: () => void;
+  confirmBillPay: () => Promise<void>;
   setBillCouponInput: (v: string) => void;
   applyBillCoupon: () => void;
   openRasaInfo: () => void;
@@ -600,7 +601,38 @@ export const useStore = create<Store>((set, get) => ({
   },
   applyBillOffer: (id) => set((s) => ({ billOffer: s.billOffer === id ? null : id })),
   selectBillPay: (id) => set({ billPay: id, screen: 'billsummary' }),
-  confirmBillPay: () => set({ screen: 'billsuccess', rasaInfoOpen: false, couponOpen: false }),
+  // Pay the counter bill for real: create a kind='bill' order for the exact payable the summary
+  // shows (rupees → integer paise) and run the standard Razorpay flow. Mock vendors (no UUID)
+  // keep the demo behavior. UI is untouched — success still lands on the billsuccess screen.
+  confirmBillPay: async () => {
+    const { vendorId, billAmt, billOffer, authed } = get();
+    const payableRupees = billPayable(billAmt, billOffer);
+    const isLiveVendor = UUID_RE.test(vendorId);
+    if (!authed || !isLiveVendor || payableRupees <= 0) {
+      set({ screen: 'billsuccess', rasaInfoOpen: false, couponOpen: false });
+      return;
+    }
+    set({ orderBusy: true, orderError: '' });
+    try {
+      const order = await api.createBillOrder({
+        vendorId,
+        amountPaise: String(Math.round(payableRupees * 100)),
+        idempotencyKey: newIdemKey(),
+      });
+      set({ orderBusy: false });
+      await payForOrder({
+        orderId: order.id,
+        description: 'Rasa bill payment',
+        onConfirmed: () => set({ screen: 'billsuccess', rasaInfoOpen: false, couponOpen: false }),
+        onUnavailable: () =>
+          set({ orderError: 'Online payment is not configured on the server — pay at the counter.' }),
+        onError: (m) => set({ orderError: m }),
+        onDismiss: () => {},
+      });
+    } catch (e) {
+      set({ orderBusy: false, orderError: (e as Error).message || 'Could not start the bill payment.' });
+    }
+  },
   setBillCouponInput: (v) => set({ billCouponInput: v }),
   applyBillCoupon: () => {
     const c = get().billCouponInput.trim();
