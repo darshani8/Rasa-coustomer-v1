@@ -143,6 +143,10 @@ export interface AppState {
   parkDay: ParkDay;
   parkQty: number;
   parkSlot: string | null;
+  // real bookable windows for the current live vendor (null = mock demo windows)
+  liveSlotWindows: import('../api').BackendSlotWindow[] | null;
+  // the chosen live window's start, carried into createOrder({ slotStartMs })
+  parkSlotStartMs: number | null;
   // join-queue sheet
   queueSheet: boolean;
   // auth
@@ -294,6 +298,8 @@ const initialState: AppState = {
   parkDay: 'today',
   parkQty: 1,
   parkSlot: null,
+  liveSlotWindows: null,
+  parkSlotStartMs: null,
   queueSheet: false,
   otp: ['', '', '', '', '', ''], // backend OTP is 6 digits
   // Live session: start at the sign-in gate unless a token is already stored.
@@ -484,7 +490,13 @@ export const useStore = create<Store>((set, get) => ({
     try {
       let id = orderId;
       if (!id) {
-        const order = await api.createOrder({ vendorId, items, idempotencyKey: newIdemKey() });
+        const { parkSlotStartMs } = get();
+        const order = await api.createOrder({
+          vendorId,
+          items,
+          idempotencyKey: newIdemKey(),
+          ...(parkSlotStartMs ? { slotStartMs: parkSlotStartMs } : {}),
+        });
         id = order.id;
         set({ orderId: id });
       }
@@ -503,11 +515,27 @@ export const useStore = create<Store>((set, get) => ({
     }
   },
 
-  parkOrder: () => set({ parkSheet: true }),
+  parkOrder: () => {
+    set({ parkSheet: true });
+    // Live vendor: pull the real bookable windows every time the sheet opens, so a slot the
+    // vendor just confirmed (e.g. 1-hour windows) shows up immediately.
+    const { vendorId, liveVendorById } = get();
+    if (liveVendorById[vendorId]) {
+      api
+        .getSlots(vendorId)
+        .then((r) => set({ liveSlotWindows: r.windows }))
+        .catch(() => set({ liveSlotWindows: null }));
+    } else {
+      set({ liveSlotWindows: null });
+    }
+  },
   parkConfirm: () => {
-    const { parkSlot, cart } = get();
+    const { parkSlot, cart, liveSlotWindows } = get();
     if (!parkSlot || cartCountOf(cart) === 0) return; // CTA is disabled in this state anyway
-    set({ parkSheet: false, screen: 'pay' });
+    // Live windows use id = String(startMs); carry it into order creation so the backend
+    // reserves the window (mock demo slots carry nothing).
+    const startMs = liveSlotWindows ? Number(parkSlot) || null : null;
+    set({ parkSheet: false, screen: 'pay', parkSlotStartMs: startMs });
   },
   closeParkSheet: () => set({ parkSheet: false }),
   selectSlot: (id) => set((s) => ({ parkSlot: s.parkSlot === id ? null : id })),
