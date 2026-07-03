@@ -38,6 +38,8 @@ export interface Vendor {
   address: string;
   items: MenuItem[];
   reviews: Review[];
+  /** Real coordinates for live vendors (mock catalogue vendors omit it). */
+  geo?: { lat: number; lng: number } | null;
 }
 
 export interface TruckTheme {
