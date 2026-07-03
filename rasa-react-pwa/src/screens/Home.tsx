@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { useStore } from '@/state/store';
 import { HOME_ORDER, VENDORS, VENDOR_DIET, STREETS, HOME_CATEGORIES } from '@/data';
 import { toVendorCard } from '@/lib/vendorCard';
@@ -23,6 +24,9 @@ export default function Home() {
   const go = useStore((s) => s.go);
   const openVendor = useStore((s) => s.openVendor);
   const openStreet = useStore((s) => s.openStreet);
+  // "See all" wiring: streets expand in place; the vendors link scrolls to the full list below.
+  const [showAllStreets, setShowAllStreets] = useState(false);
+  const allTrucksRef = useRef<HTMLDivElement>(null);
   const openCategory = useStore((s) => s.openCategory);
 
   const liveVendors = useStore((s) => s.liveVendors);
@@ -120,9 +124,22 @@ export default function Home() {
       <div style={s('padding:26px 0 0')}>
         <div style={s('display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;padding:0 22px')}>
           <div style={s("font:700 var(--section-title, 17px) var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.3px")}>Bangalore food streets</div>
-          <span style={s("font:600 12px 'Inter';color:var(--p,#7D1535)")}>See all</span>
+          <span
+            onClick={() => setShowAllStreets((prev) => !prev)}
+            role="button"
+            style={s("font:600 12px 'Inter';color:var(--p,#7D1535);cursor:pointer")}
+          >
+            {showAllStreets ? 'Show less' : 'See all'}
+          </span>
         </div>
-        <div className="scr rail" style={s('display:flex;gap:11px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 22px 4px;scroll-behavior:smooth')}>
+        <div
+          className={showAllStreets ? undefined : 'scr rail'}
+          style={s(
+            showAllStreets
+              ? 'display:flex;gap:11px;flex-wrap:wrap;padding:0 22px 4px'
+              : 'display:flex;gap:11px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 22px 4px;scroll-behavior:smooth'
+          )}
+        >
           {STREETS.map((st) => (
             <button
               key={st.id}
@@ -170,7 +187,13 @@ export default function Home() {
       <div style={s('padding:24px 22px 0')}>
         <div style={s('display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px')}>
           <div style={s("font:700 var(--section-title, 17px) var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.3px")}>Order ahead, skip the wait</div>
-          <span style={s("font:600 12px 'Inter';color:var(--p,#7D1535)")}>See all</span>
+          <span
+            onClick={() => allTrucksRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            role="button"
+            style={s("font:600 12px 'Inter';color:var(--p,#7D1535);cursor:pointer")}
+          >
+            See all
+          </span>
         </div>
         <div className="scr rail" style={s('display:flex;gap:14px;overflow-x:auto;margin:0 -22px;padding:0 22px 4px;scroll-behavior:smooth')}>
           {cards.map((vd) => (
@@ -180,7 +203,7 @@ export default function Home() {
       </div>
 
       {/* all food trucks */}
-      <div style={s('padding:28px 22px 0')}>
+      <div ref={allTrucksRef} style={s('padding:28px 22px 0')}>
         <div style={s('display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px')}>
           <div style={s("font:700 var(--section-title, 17px) var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.3px")}>All food trucks</div>
           <span style={s("font:600 11px 'JetBrains Mono',monospace;color:#A39BB0;letter-spacing:.5px")}>{cards.length} LIVE</span>
