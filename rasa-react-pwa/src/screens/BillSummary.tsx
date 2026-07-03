@@ -17,6 +17,8 @@ export default function BillSummary() {
     billOffer,
     billPay,
     confirmBillPay,
+    orderError,
+    orderBusy,
     goPayMethod,
   } = useStore((st) => ({
     go: st.go,
@@ -25,6 +27,8 @@ export default function BillSummary() {
     billOffer: st.billOffer,
     billPay: st.billPay,
     confirmBillPay: st.confirmBillPay,
+    orderError: st.orderError,
+    orderBusy: st.orderBusy,
     goPayMethod: () => st.go('paymethod'),
   }));
 
@@ -114,6 +118,10 @@ export default function BillSummary() {
 
       <div style={s('height:20px')} />
 
+      {orderError && (
+        <div style={s("margin:0 16px 8px;font:600 11.5px 'Inter';color:#C0392B;text-align:center")}>{orderError}</div>
+      )}
+
       <div style={s('position:sticky;bottom:0;margin-top:auto;background:rgba(250,246,243,.97);backdrop-filter:blur(10px);border-top:1px solid #E6DFD4;padding:12px 16px;display:flex;align-items:center;gap:12px')}>
         <div style={s('flex-shrink:0')}>
           <div style={s("font:600 9px 'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase;color:#A39BB0")}>Pay using</div>
@@ -127,7 +135,7 @@ export default function BillSummary() {
           onClick={() => confirmBillPay()}
           style={s('flex-shrink:0;background:var(--p,#7D1535);color:#fff;border:none;border-radius:13px;padding:14px 24px;font:700 13px var(--display,"Space Grotesk");cursor:pointer;display:flex;align-items:center;gap:7px')}
         >
-          Pay now <span>→</span>
+          {orderBusy ? 'Starting…' : 'Pay now'} <span>→</span>
         </button>
       </div>
     </div>

@@ -71,6 +71,12 @@ export function getOrder(id: string): Promise<BackendOrder>;
 /** Browser GPS (5s timeout); resolves null when denied or unavailable. */
 export function requestGeoLocation(): Promise<{ lat: number; lng: number } | null>;
 
+export function createBillOrder(input: {
+  vendorId: string;
+  amountPaise: string;
+  idempotencyKey: string;
+}): Promise<BackendOrder>;
+
 export function getGoogleConfig(): Promise<{ clientId: string | null }>;
 export function googleLogin(credential: string): Promise<{ token: string }>;
 

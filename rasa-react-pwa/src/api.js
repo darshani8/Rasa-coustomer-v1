@@ -194,6 +194,19 @@ export async function login({ phone, password }) {
  * Clears local tokens unconditionally.
  */
 /**
+ * POST /orders/bill — settle a counter bill of `amountPaise` (integer paise string) with the
+ * vendor through the normal payment pipeline. Same Order shape back (kind='bill').
+ */
+export async function createBillOrder({ vendorId, amountPaise, idempotencyKey }) {
+  if (!idempotencyKey) throw new Error('createBillOrder requires an idempotencyKey');
+  return request('/orders/bill', {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify({ vendorId, amountPaise }),
+  });
+}
+
+/**
  * GET /auth/google/config → { clientId: string | null }. Public — null means Google login is
  * not enabled on the server yet.
  */
