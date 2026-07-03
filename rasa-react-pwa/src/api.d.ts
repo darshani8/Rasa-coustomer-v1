@@ -77,7 +77,7 @@ export interface QueueStatus {
   aheadCount: number | null;
   nowServingOrderNumber: string | null;
   estimatedWaitMinutes: number | null;
-  zone: 'queue' | 'payment' | 'collection' | 'done' | 'cancelled';
+  zone: 'waiting' | 'payment' | 'collection' | 'done' | 'cancelled';
   payWindowExpiresAtMs: number | null;
   vendorLocation: { lat: number; lng: number } | null;
 }

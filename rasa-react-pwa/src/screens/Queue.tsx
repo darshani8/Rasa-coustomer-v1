@@ -102,12 +102,12 @@ export default function Queue() {
               : ahead === 0
                 ? "You're up next"
                 : `${ahead} ahead of you`,
-      zoneRank:
-        queueStatus.zone === 'collection' || queueStatus.zone === 'done'
-          ? 3
-          : queueStatus.zone === 'payment'
-            ? 2
-            : 1,
+      // Stage-reached flags for the zone timeline. Payment counts as reached once the order is
+      // paid (a paid order goes BACK to waiting for the kitchen, but never un-pays).
+      paymentReached:
+        queueStatus.zone === 'payment' ||
+        (queueStatus.status !== 'created' && queueStatus.status !== 'cancelled'),
+      collectionReached: queueStatus.zone === 'collection' || queueStatus.zone === 'done',
     };
   })();
 
@@ -228,9 +228,9 @@ export default function Queue() {
         <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:20px 18px;margin-top:14px;position:relative')}>
           <div style={s('position:absolute;left:36px;top:30px;bottom:30px;width:2px;background:#EFE9DF')} />
           {[
-            { label: 'In the queue', done: true, icon: clockPath },
-            { label: 'Payment Zone', done: real ? real.zoneRank >= 2 : false, icon: cardPath },
-            { label: 'Rasa Zone', done: real ? real.zoneRank >= 3 : false, icon: bagPath },
+            { label: 'Waiting Zone', done: true, icon: clockPath },
+            { label: 'Payment Zone', done: real ? real.paymentReached : false, icon: cardPath },
+            { label: 'Collection Zone', done: real ? real.collectionReached : false, icon: bagPath },
           ].map((step) => (
             <div key={step.label} style={s('display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:22px')}>
               <div style={s('display:flex;align-items:center;gap:13px')}>
