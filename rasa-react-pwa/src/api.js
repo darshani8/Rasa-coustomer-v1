@@ -193,6 +193,26 @@ export async function login({ phone, password }) {
  * POST /auth/logout  (requires Bearer)
  * Clears local tokens unconditionally.
  */
+/**
+ * GET /auth/google/config → { clientId: string | null }. Public — null means Google login is
+ * not enabled on the server yet.
+ */
+export async function getGoogleConfig() {
+  return request('/auth/google/config');
+}
+
+/**
+ * POST /auth/google with the GIS credential (a Google-signed ID token). Stores tokens on success.
+ */
+export async function googleLogin(credential) {
+  const data = await request('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
+  });
+  setTokens(data);
+  return data;
+}
+
 export async function logout() {
   const refreshToken = localStorage.getItem(REFRESH_KEY);
   try {

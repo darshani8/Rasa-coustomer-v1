@@ -184,6 +184,7 @@ export interface AppActions {
   setPhoneInput: (v: string) => void;
   setPwInput: (v: string) => void;
   doLogin: () => Promise<void>;
+  doGoogleLogin: () => Promise<void>;
   doRegister: () => Promise<void>;
   doVerifyOtp: () => Promise<void>;
   doResendOtp: () => Promise<void>;
@@ -401,6 +402,63 @@ export const useStore = create<Store>((set, get) => ({
       set({ authError: '' });
     } catch {
       /* silent — the throttle intentionally hides whether a code was recently sent */
+    }
+  },
+  // Google Sign-In: fetch the public client id from the backend (no build-time secret), load
+  // Google Identity Services on demand, and post the returned credential to /auth/google.
+  doGoogleLogin: async () => {
+    set({ authBusy: true, authError: '' });
+    try {
+      const { clientId } = await api.getGoogleConfig();
+      if (!clientId) {
+        set({ authBusy: false, authError: 'Google sign-in is not enabled yet.' });
+        return;
+      }
+      await new Promise<void>((resolve, reject) => {
+        const w = window as unknown as { google?: { accounts: { id: unknown } } };
+        if (w.google?.accounts?.id) return resolve();
+        const el = document.createElement('script');
+        el.src = 'https://accounts.google.com/gsi/client';
+        el.async = true;
+        el.onload = () => resolve();
+        el.onerror = () => reject(new Error('Could not load Google sign-in.'));
+        document.head.appendChild(el);
+      });
+      type Gsi = {
+        accounts: {
+          id: {
+            initialize: (opts: { client_id: string; callback: (r: { credential: string }) => void; cancel_on_tap_outside?: boolean }) => void;
+            prompt: (cb?: (n: { isNotDisplayed?: () => boolean; isSkippedMoment?: () => boolean }) => void) => void;
+          };
+        };
+      };
+      const gsi = (window as unknown as { google: Gsi }).google;
+      const credential = await new Promise<string>((resolve, reject) => {
+        let settled = false;
+        gsi.accounts.id.initialize({
+          client_id: clientId,
+          cancel_on_tap_outside: false,
+          callback: (r) => {
+            settled = true;
+            resolve(r.credential);
+          },
+        });
+        gsi.accounts.id.prompt((notification) => {
+          // One Tap can be suppressed (cooldown/blocked third-party cookies): surface a clear
+          // error instead of hanging forever.
+          if (!settled && (notification.isNotDisplayed?.() || notification.isSkippedMoment?.())) {
+            reject(new Error('Google sign-in was dismissed or blocked — try again.'));
+          }
+        });
+        setTimeout(() => {
+          if (!settled) reject(new Error('Google sign-in timed out.'));
+        }, 90_000);
+      });
+      await api.googleLogin(credential);
+      set({ authed: true, authBusy: false, screen: 'home', phoneInput: '', pwInput: '' });
+      void get().loadVendors();
+    } catch (e) {
+      set({ authBusy: false, authError: (e as Error).message || 'Google sign-in failed.' });
     }
   },
   doLogin: async () => {
