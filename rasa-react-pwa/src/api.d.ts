@@ -116,3 +116,34 @@ export function getGoogleConfig(): Promise<{ clientId: string | null }>;
 export function googleLogin(credential: string): Promise<{ token: string }>;
 
 export function paiseToRupees(paise: string | number | null | undefined): number;
+
+/** A row from GET /me/orders — the customer's own order history (kept intentionally slim). */
+export interface MyOrderRow {
+  orderId: string;
+  orderNumber: string;
+  queueToken: string | null;
+  vendorId: string;
+  status: 'created' | 'paid' | 'ready' | 'collected' | 'completed' | 'cancelled';
+  kind: 'standard' | 'bill';
+  totalPaise: string;
+  createdAt: string;
+}
+export function getMyOrders(opts?: { limit?: number; cursor?: string; status?: string }): Promise<{
+  data: MyOrderRow[];
+  page: { limit: number; nextCursor: string | null };
+}>;
+
+/** POST /ratings — only the order's owner may rate, and only a collected/completed order. */
+export function submitRating(input: {
+  orderId: string;
+  stars: number;
+  comment?: string;
+}): Promise<{ status: 'recorded' | 'already_rated' }>;
+
+/** POST /support/tickets */
+export function submitTicket(input: { category: string; message: string }): Promise<{ id: string; status: 'open' }>;
+
+/** POST /auth/forgot-password — sends a reset OTP to the phone. */
+export function forgotPassword(input: { phone: string }): Promise<unknown>;
+/** POST /auth/reset-password — verifies the OTP, sets the new password, invalidates all sessions. */
+export function resetPassword(input: { phone: string; otp: string; newPassword: string }): Promise<unknown>;

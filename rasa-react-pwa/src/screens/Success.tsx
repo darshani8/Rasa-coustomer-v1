@@ -67,6 +67,10 @@ export default function Success() {
         </span>
       </div>
 
+      <div style={s('text-align:center;margin-top:14px')}>
+        <span style={s("font:500 11.5px 'Inter';color:#9A93A6")}>You can rate this order from Order History once you've picked it up.</span>
+      </div>
+
       <div style={s('position:sticky;bottom:0;z-index:45;margin:auto -22px 0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px')}>
         <button
           onClick={() => go('queue')}

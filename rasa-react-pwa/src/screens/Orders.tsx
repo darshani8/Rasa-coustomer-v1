@@ -1,17 +1,56 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/state/store';
-import { getVendor, ORDERS_RAW, ORDER_SORT_LABELS } from '@/data';
+import { ORDER_SORT_LABELS, PLACEHOLDER_IMG } from '@/data';
+import { paiseToRupees, type MyOrderRow } from '@/api';
 import { s } from '@/lib/style';
 import { Icon } from '@/components';
 import type { OrderSort, OrderFilter } from '@/state/store';
 
 const backPath = 'm15 18-6-6 6-6';
-const searchPath = 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM21 21l-4.3-4.3';
 
-const SORTS: OrderSort[] = ['recent', 'amount', 'visits'];
+// "Most visited" doesn't exist for real order history (the backend has no visit counter) — only
+// offer sorts the real data actually supports.
+const SORTS: OrderSort[] = ['recent', 'amount'];
+
+const STATUS_LABEL: Record<string, string> = {
+  created: 'Awaiting payment',
+  paid: 'Preparing',
+  ready: 'Ready for pickup',
+  collected: 'Collected',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+
+function formatOrderDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const datePart = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const timePart = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${datePart} · ${timePart}`;
+}
+
+const canRate = (status: string) => status === 'collected' || status === 'completed';
 
 export default function Orders() {
-  const { go, filter, sort, sortOpen, setOrderFilter, setOrderSort, toggleSort, openVendor } = useStore((st) => ({
+  const {
+    go,
+    filter,
+    sort,
+    sortOpen,
+    setOrderFilter,
+    setOrderSort,
+    toggleSort,
+    openVendor,
+    authed,
+    myOrders,
+    myOrdersLoading,
+    myOrdersError,
+    loadMyOrders,
+    liveVendorById,
+    ratingResults,
+    rateBusyOrderId,
+    submitOrderRating,
+  } = useStore((st) => ({
     go: st.go,
     filter: st.orderFilter,
     sort: st.orderSort,
@@ -20,27 +59,44 @@ export default function Orders() {
     setOrderSort: st.setOrderSort,
     toggleSort: st.toggleSort,
     openVendor: st.openVendor,
+    authed: st.authed,
+    myOrders: st.myOrders,
+    myOrdersLoading: st.myOrdersLoading,
+    myOrdersError: st.myOrdersError,
+    loadMyOrders: st.loadMyOrders,
+    liveVendorById: st.liveVendorById,
+    ratingResults: st.ratingResults,
+    rateBusyOrderId: st.rateBusyOrderId,
+    submitOrderRating: st.submitOrderRating,
   }));
 
+  // Inline rate affordance state — local to this screen, never persisted.
+  const [openRateFor, setOpenRateFor] = useState<string | null>(null);
+  const [draftStars, setDraftStars] = useState(0);
+  const [draftComment, setDraftComment] = useState('');
+
+  useEffect(() => {
+    void loadMyOrders();
+  }, [loadMyOrders]);
+
   const orders = useMemo(() => {
-    let list = ORDERS_RAW.filter((o) => (filter === 'cancelled' ? o.status === 'cancelled' : true));
-    if (sort === 'amount') list = [...list].sort((a, b) => b.amount - a.amount);
-    else if (sort === 'visits') list = [...list].sort((a, b) => b.visits - a.visits);
-    else list = [...list].sort((a, b) => b.dateVal - a.dateVal);
-    return list.map((o) => {
-      const v = getVendor(o.id);
-      return {
-        ...o,
-        name: v.name,
-        area: v.area,
-        img: v.items[0]!.img,
-        amountLabel: '₹' + o.amount.toLocaleString('en-IN'),
-        visitsLabel: `Visited ${o.visits} times`,
-        visitsCount: `Visits: ${o.visits}`,
-        isCancelled: o.status === 'cancelled',
-      };
-    });
-  }, [filter, sort]);
+    let list = (myOrders ?? []).filter((o) => (filter === 'cancelled' ? o.status === 'cancelled' : true));
+    if (sort === 'amount') list = [...list].sort((a, b) => Number(b.totalPaise) - Number(a.totalPaise));
+    else list = [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return list;
+  }, [myOrders, filter, sort]);
+
+  const startRate = (orderId: string) => {
+    setOpenRateFor(orderId);
+    setDraftStars(0);
+    setDraftComment('');
+  };
+
+  const submitRate = (orderId: string) => {
+    if (draftStars < 1) return;
+    void submitOrderRating(orderId, draftStars, draftComment.trim() || undefined);
+    setOpenRateFor(null);
+  };
 
   const tabBase = "padding:8px 16px;border-radius:999px;cursor:pointer;font:600 12.5px 'Inter';";
   const tabStyle = (f: OrderFilter) =>
@@ -48,6 +104,11 @@ export default function Orders() {
     (filter === f
       ? 'background:var(--p,#7D1535);color:#fff;border:1px solid var(--p,#7D1535)'
       : 'background:#fff;color:#6F6A7D;border:1px solid #ECE6DB');
+
+  const showEmptySignedOut = !authed;
+  const showError = authed && !myOrdersLoading && !!myOrdersError;
+  const showLoading = authed && myOrdersLoading && myOrders === null;
+  const showEmptyList = authed && !myOrdersLoading && !myOrdersError && orders.length === 0;
 
   return (
     <div style={s('animation:rasaFade .35s ease;padding-bottom:28px')}>
@@ -59,9 +120,7 @@ export default function Orders() {
           <Icon size={18} stroke="#3B2630" w={2.4} d={backPath} />
         </button>
         <span style={s("font:700 17px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.3px")}>Order History</span>
-        <button style={s('width:36px;height:36px;border-radius:12px;background:#fff;border:1px solid #ECE6DB;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
-          <Icon size={17} stroke="#3B2630" w={2.2} d={searchPath} />
-        </button>
+        <div style={s('width:36px;height:36px')} />
       </div>
 
       <div style={s('display:flex;align-items:center;gap:9px;padding:12px 18px 14px;position:relative;z-index:30')}>
@@ -99,45 +158,173 @@ export default function Orders() {
       </div>
 
       <div style={s('padding:0 18px')}>
-        {orders.map((o) => (
-          <div key={o.id + o.date} style={s('display:flex;gap:13px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,18px);padding:12px;margin-bottom:12px')}>
-            <div style={s('width:84px;height:84px;border-radius:var(--radM,14px);flex-shrink:0;background:#EEE9E0 center/cover no-repeat;background-image:url(' + o.img + ')')} />
-            <div style={s('flex:1;min-width:0')}>
-              <div style={s('display:flex;align-items:center;gap:5px')}>
-                <span style={s("font:700 14px var(--display,'Space Grotesk');color:#3B2630;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>{o.name}</span>
-                {o.verified && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--p,#7D1535)" style={{ flexShrink: 0 }} aria-hidden="true">
-                    <path d="m9 12 2 2 4-4 1.5 1.2L12 17l-4.5-4.5z" fill="#fff" />
-                    <path d="M12 2 9.5 4.5 6 4l-.5 3.5L2 9l1.8 3L2 15l3.5 1.5L6 20l3.5-.5L12 22l2.5-2.5L18 20l.5-3.5L22 15l-1.8-3L22 9l-3.5-1.5L18 4l-3.5.5z" />
-                    <path d="m8.5 12 2.2 2.2L15.5 9.5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
+        {showEmptySignedOut && (
+          <EmptyState title="Sign in to see your orders" desc="Your order history shows up here once you're signed in." action={{ label: 'Sign in', onClick: () => go('login') }} />
+        )}
+
+        {showLoading && <EmptyState title="Loading your orders…" desc="Just a moment." />}
+
+        {showError && (
+          <EmptyState
+            title="Couldn't load your orders"
+            desc={myOrdersError}
+            action={{ label: 'Try again', onClick: () => void loadMyOrders() }}
+          />
+        )}
+
+        {showEmptyList && (
+          <EmptyState
+            title={filter === 'cancelled' ? 'No cancelled orders' : 'No orders yet'}
+            desc={filter === 'cancelled' ? "You haven't cancelled any orders." : 'Place your first order from a food truck to see it here.'}
+            action={filter === 'all' ? { label: 'Browse trucks', onClick: () => go('home') } : undefined}
+          />
+        )}
+
+        {authed &&
+          !myOrdersLoading &&
+          !myOrdersError &&
+          orders.map((o: MyOrderRow) => {
+            const vendor = liveVendorById[o.vendorId];
+            const amountLabel = '₹' + paiseToRupees(o.totalPaise).toLocaleString('en-IN');
+            const dateLabel = formatOrderDate(o.createdAt);
+            const isCancelled = o.status === 'cancelled';
+            const rating = ratingResults[o.orderId];
+            const rateOpen = openRateFor === o.orderId;
+            const rateBusy = rateBusyOrderId === o.orderId;
+            return (
+              <div key={o.orderId} style={s('display:flex;gap:13px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,18px);padding:12px;margin-bottom:12px')}>
+                <div style={s('width:84px;height:84px;border-radius:var(--radM,14px);flex-shrink:0;background:#EEE9E0 center/cover no-repeat;background-image:url(' + (vendor?.banner ?? PLACEHOLDER_IMG) + ')')} />
+                <div style={s('flex:1;min-width:0')}>
+                  <div style={s("font:700 14px var(--display,'Space Grotesk');color:#3B2630;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>
+                    {vendor?.name ?? `Order ${o.orderNumber}`}
+                  </div>
+                  <div style={s("font:500 11.5px 'Inter';color:#9A93A6;margin-top:3px;line-height:1.35")}>
+                    {o.queueToken ? `Token ${o.queueToken}` : o.orderNumber}
+                    {o.kind === 'bill' ? ' · Bill payment' : ''}
+                  </div>
+                  <div style={s('display:flex;align-items:center;gap:5px;margin-top:7px')}>
+                    <span
+                      style={s(
+                        "font:700 9px 'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase;padding:3px 7px;border-radius:6px;" +
+                          (isCancelled
+                            ? 'color:#C0392B;background:#FBE7EC'
+                            : o.status === 'completed' || o.status === 'collected'
+                              ? 'color:var(--adeep,#6E7A38);background:var(--asoft,#EEF1DC)'
+                              : 'color:var(--p,#7D1535);background:var(--psoft,#F7E9EC)')
+                      )}
+                    >
+                      {STATUS_LABEL[o.status] ?? o.status}
+                    </span>
+                  </div>
+                  <div style={s("font:500 10.5px 'Inter';color:#B0A9BC;margin-top:6px")}>{dateLabel}</div>
+
+                  {canRate(o.status) && (
+                    <div style={s('margin-top:9px')}>
+                      {rating?.status === 'recorded' && (
+                        <span style={s("font:700 11.5px 'Inter';color:var(--adeep,#6E7A38)")}>Thanks — rated ★{rating.stars}</span>
+                      )}
+                      {rating?.status === 'already_rated' && (
+                        <span style={s("font:700 11.5px 'Inter';color:#9A93A6")}>Already rated</span>
+                      )}
+                      {(!rating || rating.status === 'error') && !rateOpen && (
+                        <>
+                          {rating?.status === 'error' && (
+                            <div style={s("font:500 11px 'Inter';color:#C0392B;margin-bottom:6px")}>{rating.message}</div>
+                          )}
+                          <button
+                            onClick={() => startRate(o.orderId)}
+                            style={s('background:var(--psoft,#F7E9EC);color:var(--p,#7D1535);border:1px solid var(--pborder,#EAC9D1);border-radius:9px;padding:6px 13px;cursor:pointer;font:700 11px "Inter"')}
+                          >
+                            Rate this order
+                          </button>
+                        </>
+                      )}
+                      {rateOpen && (
+                        <div style={s('background:#FAF6F3;border:1px solid #EFE9DF;border-radius:12px;padding:10px;margin-top:2px')}>
+                          <div style={s('display:flex;gap:4px;margin-bottom:8px')}>
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <button
+                                key={n}
+                                onClick={() => setDraftStars(n)}
+                                aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                                style={s(`background:none;border:none;cursor:pointer;padding:0;font-size:20px;line-height:1;color:${n <= draftStars ? 'var(--p,#7D1535)' : '#D9CFD3'}`)}
+                              >
+                                ★
+                              </button>
+                            ))}
+                          </div>
+                          <textarea
+                            value={draftComment}
+                            onChange={(e) => setDraftComment(e.target.value.slice(0, 500))}
+                            placeholder="Add a comment (optional)"
+                            style={s("width:100%;height:56px;resize:none;background:#fff;border:1px solid #ECE6DB;border-radius:9px;padding:8px 10px;font:500 12px 'Inter';color:#3B2630;outline:none;box-sizing:border-box;margin-bottom:8px")}
+                          />
+                          <div style={s('display:flex;gap:8px')}>
+                            <button
+                              onClick={() => submitRate(o.orderId)}
+                              disabled={draftStars < 1 || rateBusy}
+                              style={s(
+                                'background:var(--p,#7D1535);color:#fff;border:none;border-radius:9px;padding:7px 14px;cursor:pointer;font:700 11.5px "Inter";' +
+                                  (draftStars < 1 || rateBusy ? 'opacity:.5' : '')
+                              )}
+                            >
+                              {rateBusy ? 'Submitting…' : 'Submit'}
+                            </button>
+                            <button
+                              onClick={() => setOpenRateFor(null)}
+                              style={s('background:none;color:#9A93A6;border:none;cursor:pointer;font:600 11.5px "Inter"')}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div style={s('display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;flex-shrink:0')}>
+                  <div style={s("font:700 15px var(--display,'Space Grotesk');color:#3B2630")}>{amountLabel}</div>
+                  {vendor && (
+                    <button
+                      onClick={() => openVendor(o.vendorId)}
+                      style={s('background:var(--psoft,#F7E9EC);color:var(--p,#7D1535);border:1px solid var(--pborder,#EAC9D1);border-radius:9px;padding:6px 13px;cursor:pointer;font:700 11px "Inter"')}
+                    >
+                      Reorder
+                    </button>
+                  )}
+                </div>
               </div>
-              <div style={s("font:500 11.5px 'Inter';color:#9A93A6;margin-top:3px;line-height:1.35")}>{o.area}</div>
-              <div style={s('display:flex;align-items:center;gap:5px;margin-top:7px')}>
-                <Icon size={13} stroke="var(--p,#7D1535)" w={2.2} round d="M12 12m-9 0M12 7v5l3 2" />
-                <span style={s("font:600 11px 'Inter';color:var(--p,#7D1535)")}>{o.visitsLabel}</span>
-              </div>
-              <div style={s("font:500 10.5px 'Inter';color:#B0A9BC;margin-top:4px")}>{o.date}</div>
-              {o.isCancelled && (
-                <span style={s("display:inline-block;margin-top:6px;font:700 9px 'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase;color:#C0392B;background:#FBE7EC;padding:3px 7px;border-radius:6px")}>
-                  Cancelled
-                </span>
-              )}
-            </div>
-            <div style={s('display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;flex-shrink:0')}>
-              <div style={s("font:700 15px var(--display,'Space Grotesk');color:#3B2630")}>{o.amountLabel}</div>
-              <div style={s("font:500 10.5px 'Inter';color:#9A93A6")}>{o.visitsCount}</div>
-              <button
-                onClick={() => openVendor(o.id)}
-                style={s('background:var(--psoft,#F7E9EC);color:var(--p,#7D1535);border:1px solid var(--pborder,#EAC9D1);border-radius:9px;padding:6px 13px;cursor:pointer;font:700 11px "Inter"')}
-              >
-                Reorder
-              </button>
-            </div>
-          </div>
-        ))}
+            );
+          })}
       </div>
+    </div>
+  );
+}
+
+function EmptyState({
+  title,
+  desc,
+  action,
+}: {
+  title: string;
+  desc: string;
+  action?: { label: string; onClick: () => void };
+}) {
+  return (
+    <div style={s('text-align:center;padding:50px 20px')}>
+      <div style={s('width:64px;height:64px;border-radius:50%;background:#F4EEE7;display:flex;align-items:center;justify-content:center;margin:0 auto 16px')}>
+        <Icon size={26} stroke="#C3BCCB" w={2} d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4ZM3 6h18M16 10a4 4 0 0 1-8 0" />
+      </div>
+      <div style={s("font:700 15px var(--display,'Space Grotesk');color:#3B2630")}>{title}</div>
+      <div style={s("font:500 12px 'Inter';color:#9A93A6;margin-top:6px")}>{desc}</div>
+      {action && (
+        <button
+          onClick={action.onClick}
+          style={s("margin-top:18px;background:var(--p,#7D1535);color:#fff;border:none;border-radius:12px;padding:11px 22px;font:700 12.5px var(--display,'Space Grotesk');cursor:pointer")}
+        >
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }

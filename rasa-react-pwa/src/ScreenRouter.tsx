@@ -35,6 +35,7 @@ const SCREENS: Record<Screen, LazyExoticComponent<ComponentType>> = {
   profile: lazy(() => import('@/screens/Profile')),
   orders: lazy(() => import('@/screens/Orders')),
   offers: lazy(() => import('@/screens/OrderDetails')),
+  legal: lazy(() => import('@/screens/Legal')),
 };
 
 export function ScreenRouter() {

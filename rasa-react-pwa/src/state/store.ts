@@ -1,22 +1,23 @@
 import { create } from 'zustand';
 import {
-  BANK_OFFERS,
-  COUPONS,
+  BILL_OFFERS,
   DEFAULT_ADDRESS,
   DEFAULT_CHAT,
   DEFAULT_NOTIFS,
+  LANGUAGES,
   OFFER_FILTERS,
   PLACEHOLDER_IMG,
   type Address,
   type ChatMessage,
   type MenuItem,
   type NotifKey,
+  type NotifPrefs,
   type OfferFilter,
   type Vendor,
 } from '@/data';
 import type { BillOfferId } from '@/lib/money';
 import * as api from '@/api';
-import type { BackendMenuItem, BackendVendor } from '@/api';
+import type { BackendMenuItem, BackendVendor, MyOrderRow } from '@/api';
 import { payForOrder } from '@/lib/razorpay';
 import { isFarFromVendor } from '@/lib/geo';
 
@@ -57,6 +58,96 @@ function writeStoredActiveOrder(orderId: string | null, vendorId: string | null)
     else localStorage.removeItem(ACTIVE_ORDER_KEY);
   } catch {
     /* storage unavailable (private mode) — the session still works, it just won't survive reload */
+  }
+}
+
+// ── settings persistence (address / notifications / language / favourites) ─────────────────
+// Mirrors the activeOrder pattern above: read once at boot, write on every change, so a reload
+// never silently resets a customer's saved preferences.
+const ADDRESS_KEY = 'rasa.address';
+const NOTIFS_KEY = 'rasa.notifs';
+const LANGUAGE_KEY = 'rasa.language';
+const FAVS_KEY = 'rasa.favs';
+
+function readStoredAddress(): Address | null {
+  try {
+    const raw = localStorage.getItem(ADDRESS_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as Partial<Address>;
+    if (typeof p.label !== 'string' || typeof p.line1 !== 'string' || typeof p.line2 !== 'string') return null;
+    return {
+      label: p.label,
+      line1: p.line1,
+      line2: p.line2,
+      city: typeof p.city === 'string' ? p.city : DEFAULT_ADDRESS.city,
+      pin: typeof p.pin === 'string' ? p.pin : DEFAULT_ADDRESS.pin,
+    };
+  } catch {
+    return null;
+  }
+}
+function writeStoredAddress(a: Address): void {
+  try {
+    localStorage.setItem(ADDRESS_KEY, JSON.stringify(a));
+  } catch {
+    /* private mode — the session still works, it just won't survive reload */
+  }
+}
+
+function readStoredNotifs(): NotifPrefs | null {
+  try {
+    const raw = localStorage.getItem(NOTIFS_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as Partial<Record<NotifKey, unknown>>;
+    const out = { ...DEFAULT_NOTIFS };
+    (Object.keys(DEFAULT_NOTIFS) as NotifKey[]).forEach((k) => {
+      if (typeof p[k] === 'boolean') out[k] = p[k] as boolean;
+    });
+    return out;
+  } catch {
+    return null;
+  }
+}
+function writeStoredNotifs(n: NotifPrefs): void {
+  try {
+    localStorage.setItem(NOTIFS_KEY, JSON.stringify(n));
+  } catch {
+    /* ignore */
+  }
+}
+
+function readStoredLanguage(): string | null {
+  try {
+    const raw = localStorage.getItem(LANGUAGE_KEY);
+    if (raw && (LANGUAGES as readonly string[]).includes(raw)) return raw;
+    return null;
+  } catch {
+    return null;
+  }
+}
+function writeStoredLanguage(l: string): void {
+  try {
+    localStorage.setItem(LANGUAGE_KEY, l);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readStoredFavs(): string[] {
+  try {
+    const raw = localStorage.getItem(FAVS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw) as unknown;
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+function writeStoredFavs(ids: string[]): void {
+  try {
+    localStorage.setItem(FAVS_KEY, JSON.stringify(ids));
+  } catch {
+    /* ignore */
   }
 }
 
@@ -114,7 +205,7 @@ export type Screen =
   | 'login' | 'signup' | 'otp'
   | 'booking' | 'success' | 'failed' | 'queue'
   | 'billamount' | 'billoffers' | 'billsummary' | 'alloffers' | 'billsuccess'
-  | 'profile' | 'orders' | 'offers';
+  | 'profile' | 'orders' | 'offers' | 'legal';
 
 export type VendorTab = 'Menu' | 'Offers' | 'Reviews' | 'About';
 export type DietFilter = 'all' | 'veg' | 'nonveg';
@@ -141,10 +232,16 @@ export interface AppState {
   // The backend bill order created by confirmBillPay. Re-taps of "Pay now" reuse it (never a
   // second charge); any amount/offer edit resets it so a new order is created for the new total.
   billOrderId: string | null;
-  // order history
+  // order history (real backend orders — GET /me/orders)
   orderFilter: OrderFilter;
   orderSort: OrderSort;
   sortOpen: boolean;
+  myOrders: MyOrderRow[] | null;
+  myOrdersLoading: boolean;
+  myOrdersError: string;
+  // Ratings submitted from the order-history cards (POST /ratings), keyed by orderId.
+  ratingResults: Record<string, { status: 'recorded' | 'already_rated' | 'error'; stars?: number; message?: string }>;
+  rateBusyOrderId: string | null;
   // order-details offers
   bankOpen: boolean;
   offerFilter: OfferFilter;
@@ -165,11 +262,23 @@ export interface AppState {
   chatMsgs: ChatMessage[] | null;
   ticketCat: string;
   ticketText: string;
+  ticketBusy: boolean;
+  ticketError: string;
+  ticketResult: { id: string; status: string } | null;
   // account
   address: Address;
   notifs: Record<NotifKey, boolean>;
   language: string;
   location: string;
+  // Favourite vendors (Vendor page "Save" + Profile's favourites count), persisted locally.
+  favIds: string[];
+  // Change-password flow (Profile → Security): forgot/reset OTP against the signed-in phone.
+  pwResetSheet: boolean;
+  pwResetStep: 'idle' | 'otp-sent' | 'done';
+  pwResetBusy: boolean;
+  pwResetError: string;
+  pwResetOtp: string;
+  pwResetNew: string;
   // join-queue sheet
   queueSheet: boolean;
   // Join gate: notice shown in the sheet (location required / far guidance / error), busy flag
@@ -292,6 +401,12 @@ export interface AppActions {
   toggleSort: () => void;
   setOrderFilter: (f: OrderFilter) => void;
   setOrderSort: (k: OrderSort) => void;
+  // Fetch the customer's real order history (GET /me/orders). No-op when signed out.
+  loadMyOrders: () => Promise<void>;
+  // Rate a collected/completed order (POST /ratings).
+  submitOrderRating: (orderId: string, stars: number, comment?: string) => Promise<void>;
+  // Toggle a vendor in/out of the locally-saved favourites set.
+  toggleFavorite: (vendorId: string) => void;
   // support
   setSupportTopic: (id: string) => void;
   toggleFaq: (i: number) => void;
@@ -299,7 +414,7 @@ export interface AppActions {
   sendChat: () => void;
   setTicketCat: (c: string) => void;
   setTicketText: (v: string) => void;
-  submitTicket: () => void;
+  submitTicket: () => Promise<void>;
   // account
   setAddrField: (key: keyof Address, val: string) => void;
   setAddrLabel: (label: string) => void;
@@ -309,6 +424,13 @@ export interface AppActions {
   saveLanguage: () => void;
   setLocation: (a: string) => void;
   useSavedLocation: () => void;
+  // change password (Profile → Security)
+  openChangePassword: () => void;
+  closeChangePassword: () => void;
+  requestPasswordOtp: () => Promise<void>;
+  setPwResetOtp: (v: string) => void;
+  setPwResetNew: (v: string) => void;
+  confirmPasswordReset: () => Promise<void>;
 }
 
 export type Store = AppState & AppActions;
@@ -329,6 +451,11 @@ const initialState: AppState = {
   orderFilter: 'all',
   orderSort: 'recent',
   sortOpen: false,
+  myOrders: null,
+  myOrdersLoading: false,
+  myOrdersError: '',
+  ratingResults: {},
+  rateBusyOrderId: null,
   bankOpen: false,
   offerFilter: OFFER_FILTERS[0],
   selectedOffer: null,
@@ -346,10 +473,20 @@ const initialState: AppState = {
   chatMsgs: null,
   ticketCat: 'Order issue',
   ticketText: '',
-  address: DEFAULT_ADDRESS,
-  notifs: DEFAULT_NOTIFS,
-  language: 'English',
+  ticketBusy: false,
+  ticketError: '',
+  ticketResult: null,
+  address: readStoredAddress() ?? DEFAULT_ADDRESS,
+  notifs: readStoredNotifs() ?? DEFAULT_NOTIFS,
+  language: readStoredLanguage() ?? 'English',
   location: 'Indiranagar, BLR',
+  favIds: readStoredFavs(),
+  pwResetSheet: false,
+  pwResetStep: 'idle',
+  pwResetBusy: false,
+  pwResetError: '',
+  pwResetOtp: '',
+  pwResetNew: '',
   queueSheet: false,
   joinNotice: null,
   joinBusy: false,
@@ -405,9 +542,13 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       screen,
       ...(screen === 'queue' && s.orderId && s.orderVendorId ? { vendorId: s.orderVendorId } : {}),
+      // Entering the ticket screen fresh (from Support, SupportTopic or Profile) always starts a
+      // clean submission — a previous success/error must never linger on the next visit.
+      ...(screen === 'ticket' ? { ticketBusy: false, ticketError: '', ticketResult: null } : {}),
       queueSheet: false,
       rasaInfoOpen: false,
       couponOpen: false,
+      pwResetSheet: false,
     })),
   openVendor: (id) => {
     // A backend order is single-vendor: switching vendors empties the cart so items from a
@@ -575,7 +716,26 @@ export const useStore = create<Store>((set, get) => ({
     // logout() captures the tokens before clearTokens() below removes them locally.
     void api.logout().catch(() => {});
     api.clearTokens();
-    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, me: null, orderId: null, orderVendorId: null, exitSheet: false, billOrderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, customerGeo: null, cart: {} });
+    set({
+      authed: false,
+      screen: 'login',
+      liveVendors: null,
+      liveVendorById: {},
+      me: null,
+      orderId: null,
+      orderVendorId: null,
+      exitSheet: false,
+      billOrderId: null,
+      farFromVendor: null,
+      schedulingPlan: null,
+      queueStatus: null,
+      queueStatusAt: null,
+      customerGeo: null,
+      cart: {},
+      myOrders: null,
+      myOrdersError: '',
+      pwResetSheet: false,
+    });
   },
   // On boot, if the access token expired but a refresh token exists, refresh silently before deciding
   // whether to show the sign-in gate; then load live vendors when authed.
@@ -1039,9 +1199,11 @@ export const useStore = create<Store>((set, get) => ({
   setOfferFilter: (f) => set({ offerFilter: f }),
   setSelectedOffer: (code) => set({ selectedOffer: code }),
   setCouponInput: (v) => set({ couponInput: v }),
+  // Only the two REAL bill-payment offers are recognised here — this screen is display-only (it
+  // never changes a real order total), so an unknown code simply doesn't select anything.
   applyCoupon: () => {
     const code = get().couponInput.trim().toUpperCase();
-    const match = [...BANK_OFFERS, ...COUPONS].find((o) => o.code === code);
+    const match = BILL_OFFERS.find((o) => o.code === code);
     if (match) set({ selectedOffer: match.code });
   },
   toggleBank: () => set((s) => ({ bankOpen: !s.bankOpen })),
@@ -1049,6 +1211,48 @@ export const useStore = create<Store>((set, get) => ({
   toggleSort: () => set((s) => ({ sortOpen: !s.sortOpen })),
   setOrderFilter: (f) => set({ orderFilter: f }),
   setOrderSort: (k) => set({ orderSort: k, sortOpen: false }),
+
+  // Real order history (GET /me/orders). Signed-out customers see the sign-in empty state instead
+  // of a stale or fabricated list — never fall back to mock data here.
+  loadMyOrders: async () => {
+    if (!api.isAuthenticated()) {
+      set({ myOrders: null, myOrdersLoading: false, myOrdersError: '' });
+      return;
+    }
+    set({ myOrdersLoading: true, myOrdersError: '' });
+    try {
+      const res = await api.getMyOrders({ limit: 30 });
+      set({ myOrders: res.data ?? [], myOrdersLoading: false });
+    } catch (e) {
+      set({ myOrders: null, myOrdersLoading: false, myOrdersError: (e as Error).message || 'Could not load your orders.' });
+    }
+  },
+  // POST /ratings from an order-history card. One in flight at a time (rateBusyOrderId gates the
+  // button); the result (recorded / already_rated / error) is keyed by orderId so each card tracks
+  // its own outcome independently.
+  submitOrderRating: async (orderId, stars, comment) => {
+    if (get().rateBusyOrderId) return;
+    set({ rateBusyOrderId: orderId });
+    try {
+      const res = await api.submitRating({ orderId, stars, ...(comment ? { comment } : {}) });
+      set((s) => ({
+        rateBusyOrderId: null,
+        ratingResults: { ...s.ratingResults, [orderId]: { status: res.status, stars } },
+      }));
+    } catch (e) {
+      set((s) => ({
+        rateBusyOrderId: null,
+        ratingResults: {
+          ...s.ratingResults,
+          [orderId]: { status: 'error', message: (e as Error).message || 'Could not submit your rating.' },
+        },
+      }));
+    }
+  },
+  toggleFavorite: (vendorId) =>
+    set((s) => ({
+      favIds: s.favIds.includes(vendorId) ? s.favIds.filter((id) => id !== vendorId) : [...s.favIds, vendorId],
+    })),
 
   setSupportTopic: (id) => set({ screen: 'supporttopic', supportTopic: id, faqOpen: null }),
   toggleFaq: (i) => set((s) => ({ faqOpen: s.faqOpen === i ? null : i })),
@@ -1070,8 +1274,20 @@ export const useStore = create<Store>((set, get) => ({
     }, 900);
   },
   setTicketCat: (c) => set({ ticketCat: c }),
-  setTicketText: (v) => set({ ticketText: v }),
-  submitTicket: () => set({ screen: 'support', ticketText: '' }),
+  setTicketText: (v) => set({ ticketText: v, ticketError: '' }),
+  // POST /support/tickets for real; the screen shows a success confirmation or the server's error.
+  submitTicket: async () => {
+    const { ticketCat, ticketText, ticketBusy } = get();
+    const message = ticketText.trim();
+    if (ticketBusy || !message) return;
+    set({ ticketBusy: true, ticketError: '' });
+    try {
+      const res = await api.submitTicket({ category: ticketCat, message });
+      set({ ticketBusy: false, ticketResult: res, ticketText: '' });
+    } catch (e) {
+      set({ ticketBusy: false, ticketError: (e as Error).message || 'Could not submit your ticket.' });
+    }
+  },
 
   setAddrField: (key, val) => set((s) => ({ address: { ...s.address, [key]: val } })),
   setAddrLabel: (label) => set((s) => ({ address: { ...s.address, label } })),
@@ -1082,6 +1298,46 @@ export const useStore = create<Store>((set, get) => ({
   setLocation: (a) => set({ location: a, screen: 'home' }),
   useSavedLocation: () =>
     set((s) => ({ location: `${s.address.line2 || 'Indiranagar'}, BLR`, screen: 'home' })),
+
+  // Change password (Profile → Security): forgot/reset-OTP against the signed-in account's own
+  // phone number — there is no "current password" endpoint, so this reuses the public reset flow.
+  openChangePassword: () => set({ pwResetSheet: true, pwResetStep: 'idle', pwResetBusy: false, pwResetError: '', pwResetOtp: '', pwResetNew: '' }),
+  closeChangePassword: () => set({ pwResetSheet: false }),
+  requestPasswordOtp: async () => {
+    const phone = get().me?.phone;
+    if (!phone) {
+      set({ pwResetError: 'Sign in again to change your password.' });
+      return;
+    }
+    set({ pwResetBusy: true, pwResetError: '' });
+    try {
+      await api.forgotPassword({ phone });
+      set({ pwResetBusy: false, pwResetStep: 'otp-sent' });
+    } catch (e) {
+      set({ pwResetBusy: false, pwResetError: (e as Error).message || 'Could not send the code.' });
+    }
+  },
+  setPwResetOtp: (v) => set({ pwResetOtp: v, pwResetError: '' }),
+  setPwResetNew: (v) => set({ pwResetNew: v, pwResetError: '' }),
+  confirmPasswordReset: async () => {
+    const { me, pwResetOtp, pwResetNew, pwResetBusy } = get();
+    if (pwResetBusy || !me?.phone) return;
+    if (pwResetOtp.trim().length < 4) {
+      set({ pwResetError: 'Enter the code you received.' });
+      return;
+    }
+    if (pwResetNew.length < 8) {
+      set({ pwResetError: 'New password must be at least 8 characters.' });
+      return;
+    }
+    set({ pwResetBusy: true, pwResetError: '' });
+    try {
+      await api.resetPassword({ phone: me.phone, otp: pwResetOtp.trim(), newPassword: pwResetNew });
+      set({ pwResetBusy: false, pwResetStep: 'done' });
+    } catch (e) {
+      set({ pwResetBusy: false, pwResetError: (e as Error).message || 'Could not reset your password.' });
+    }
+  },
 }));
 
 // Mirror every change of the active queue place to localStorage (join, pay, exit, finish,
@@ -1090,4 +1346,13 @@ useStore.subscribe((s, prev) => {
   if (s.orderId !== prev.orderId || s.orderVendorId !== prev.orderVendorId) {
     writeStoredActiveOrder(s.orderId, s.orderVendorId);
   }
+});
+
+// Mirror settings changes to localStorage the same way — address, notification preferences,
+// language and favourites all survive a reload instead of silently resetting to defaults.
+useStore.subscribe((s, prev) => {
+  if (s.address !== prev.address) writeStoredAddress(s.address);
+  if (s.notifs !== prev.notifs) writeStoredNotifs(s.notifs);
+  if (s.language !== prev.language) writeStoredLanguage(s.language);
+  if (s.favIds !== prev.favIds) writeStoredFavs(s.favIds);
 });

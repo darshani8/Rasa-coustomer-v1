@@ -37,8 +37,8 @@ export default function Chat() {
           <span style={s('position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;background:#3FB37F;border:2px solid #FAF6F3')} />
         </div>
         <div style={s('flex:1')}>
-          <div style={s("font:700 14px var(--display,'Space Grotesk');color:#3B2630")}>Riya · Rasa Support</div>
-          <div style={s("font:500 10.5px 'Inter';color:#3FB37F")}>Online · replies in ~2 min</div>
+          <div style={s("font:700 14px var(--display,'Space Grotesk');color:#3B2630")}>Rasa assistant (automated)</div>
+          <div style={s("font:500 10.5px 'Inter';color:#3FB37F")}>For a real person, raise a ticket</div>
         </div>
       </div>
 
