@@ -150,6 +150,8 @@ export interface AppState {
   joinNotice: string | null;
   joinBusy: boolean;
   joinFarAck: boolean;
+  // True when the customer is ALREADY in a queue — the sheet's button becomes "View my queue".
+  joinAlready: boolean;
   // auth
   otp: string[];
   // ── live backend session + data ──
@@ -163,6 +165,12 @@ export interface AppState {
   liveVendorById: Record<string, Vendor>;
   // the real backend order being paid for + its progress
   orderId: string | null;
+  // Which vendor the active order/queue place belongs to — one active queue at a time; browsing
+  // other vendors must never orphan or duplicate it.
+  orderVendorId: string | null;
+  // Exit-queue confirmation sheet (unpaid orders only).
+  exitSheet: boolean;
+  exitBusy: boolean;
   // Distance verdict at order time: true = beyond the leave-now radius (Queue page shows the
   // "you're far — watch your queue number" card), false = near, null = unknown (GPS denied /
   // mock vendor) → the default tile renders, exactly as before this feature.
@@ -210,6 +218,10 @@ export interface AppActions {
   placeOrderAndPay: () => Promise<void>;
   // Poll the live queue status for the current order (no-op without a real order).
   pollQueueStatus: () => Promise<void>;
+  // Exit-queue confirmation (unpaid orders only): sheet open/close + the confirmed exit.
+  openExitSheet: () => void;
+  closeExitSheet: () => void;
+  confirmExitQueue: () => Promise<void>;
   // Pay for the current order from the queue screen (join-first: the pay window opened at the
   // front of the line, or the customer dismissed Checkout earlier and wants to retry).
   payCurrentOrder: () => Promise<void>;
@@ -314,6 +326,7 @@ const initialState: AppState = {
   joinNotice: null,
   joinBusy: false,
   joinFarAck: false,
+  joinAlready: false,
   otp: ['', '', '', '', '', ''], // backend OTP is 6 digits
   // Live session: start at the sign-in gate unless a token is already stored.
   authed: api.isAuthenticated(),
@@ -324,6 +337,9 @@ const initialState: AppState = {
   liveVendors: null,
   liveVendorById: {},
   orderId: null,
+  orderVendorId: null,
+  exitSheet: false,
+  exitBusy: false,
   farFromVendor: null,
   schedulingPlan: null,
   queueStatus: null,
@@ -341,26 +357,30 @@ export const useStore = create<Store>((set, get) => ({
 
   // A cart change invalidates any order already created for the previous cart, so the next Pay
   // creates a fresh backend order (never re-uses a stale one → no wrong amount).
-  add: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 }, orderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, orderError: '' })),
+  // Cart edits do NOT clear the active order: the joined order IS the queue place (join-first) —
+  // edits only shape a FUTURE order. Exiting/finishing the queue is what frees orderId.
+  add: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 }, orderError: '' })),
   remove: (id) =>
     set((s) => {
       const cart = { ...s.cart };
       const n = (cart[id] ?? 0) - 1;
       if (n <= 0) delete cart[id];
       else cart[id] = n;
-      return { cart, orderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, orderError: '' };
+      return { cart, orderError: '' };
     }),
 
   go: (screen) => set({ screen, queueSheet: false, rasaInfoOpen: false, couponOpen: false }),
   openVendor: (id) => {
-    // A backend order is single-vendor: switching vendors must empty the cart (and any order made
-    // for it), so items from a previous vendor are never sent under this one.
+    // A backend order is single-vendor: switching vendors empties the cart so items from a
+    // previous vendor are never sent under this one. The ACTIVE order/queue place is kept —
+    // browsing must never orphan a live queue membership (one queue at a time is enforced at
+    // join/pay time via orderVendorId).
     const switching = id !== get().vendorId;
     set({
       screen: 'vendor',
       vendorId: id,
       tab: 'Menu',
-      ...(switching ? { cart: {}, orderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, orderError: '' } : {}),
+      ...(switching ? { cart: {}, orderError: '' } : {}),
     });
     // If this is a live vendor, load its real menu (real menuItem uuids) so the cart is orderable.
     if (get().liveVendorById[id]) {
@@ -510,7 +530,7 @@ export const useStore = create<Store>((set, get) => ({
     // logout() captures the tokens before clearTokens() below removes them locally.
     void api.logout().catch(() => {});
     api.clearTokens();
-    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, billOrderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, customerGeo: null, cart: {} });
+    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, orderVendorId: null, exitSheet: false, billOrderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, customerGeo: null, cart: {} });
   },
   // On boot, if the access token expired but a refresh token exists, refresh silently before deciding
   // whether to show the sign-in gate; then load live vendors when authed.
@@ -550,7 +570,13 @@ export const useStore = create<Store>((set, get) => ({
       set({ screen: 'login', authError: 'Please sign in to pay.' });
       return;
     }
-    const { cart, vendorId, orderId } = get();
+    const { cart, vendorId, orderId, orderVendorId } = get();
+    // One active queue place per customer: an order from ANOTHER vendor must be finished or
+    // exited first — reusing it here would pay the wrong vendor's order.
+    if (orderId && orderVendorId && orderVendorId !== vendorId) {
+      set({ orderError: "You're already in a queue at another stall — finish or exit it first." });
+      return;
+    }
     // Only REAL menu-item uuids belonging to the CURRENT live vendor's menu are ordered (mock ids and
     // any stray foreign items are skipped — createOrder is single-vendor and rejects foreign items).
     const menu = get().liveVendorById[vendorId]?.items;
@@ -579,7 +605,7 @@ export const useStore = create<Store>((set, get) => ({
           ...(geo ? { customerLocation: geo } : {}),
         });
         id = order.id;
-        set({ orderId: id });
+        set({ orderId: id, orderVendorId: vendorId });
       }
       set({ orderBusy: false });
       const fetchPlan = async (orderId2: string): Promise<void> => {
@@ -647,9 +673,39 @@ export const useStore = create<Store>((set, get) => ({
     }
   },
 
+  openExitSheet: () => set({ exitSheet: true }),
+  closeExitSheet: () => set({ exitSheet: false }),
+  // Confirmed exit (unpaid orders only — the backend enforces created → cancelled). Frees the
+  // queue place server-side; locally the whole order context resets so they can rejoin fresh.
+  confirmExitQueue: async () => {
+    const { orderId, exitBusy } = get();
+    if (!orderId || exitBusy) return;
+    set({ exitBusy: true });
+    try {
+      await api.leaveQueue(orderId);
+      set({
+        exitBusy: false,
+        exitSheet: false,
+        orderId: null,
+        orderVendorId: null,
+        queueStatus: null,
+        queueStatusAt: null,
+        farFromVendor: null,
+        schedulingPlan: null,
+        orderError: '',
+      });
+    } catch (e) {
+      set({
+        exitBusy: false,
+        exitSheet: false,
+        orderError: (e as Error).message || 'Could not exit the queue.',
+      });
+    }
+  },
 
-  openQueueSheet: () => set({ queueSheet: true, joinNotice: null, joinFarAck: false }),
-  closeQueueSheet: () => set({ queueSheet: false, joinNotice: null, joinFarAck: false }),
+
+  openQueueSheet: () => set({ queueSheet: true, joinNotice: null, joinFarAck: false, joinAlready: false }),
+  closeQueueSheet: () => set({ queueSheet: false, joinNotice: null, joinFarAck: false, joinAlready: false }),
   // The REAL join (live vendors): location is REQUIRED — no location, no join. With location on,
   // the 5 km radius is checked at tap time; beyond it the agreed guidance shows and the customer
   // must explicitly tap again ("Join anyway") — they can still order, but travel tracking is off
@@ -667,10 +723,48 @@ export const useStore = create<Store>((set, get) => ({
       set({ queueSheet: false, screen: 'login', authError: 'Please sign in to join the queue.' });
       return;
     }
-    if (get().orderId) {
-      // Already in the queue for this order — just show it.
-      set({ queueSheet: false, screen: 'queue', joinNotice: null, joinFarAck: false });
-      return;
+    const active = get();
+    if (active.orderId) {
+      const zone = active.queueStatus?.zone;
+      if (zone === 'done' || zone === 'cancelled') {
+        // The previous journey finished — clear it and fall through to a fresh join.
+        set({
+          orderId: null,
+          orderVendorId: null,
+          queueStatus: null,
+          queueStatusAt: null,
+          farFromVendor: null,
+          schedulingPlan: null,
+        });
+      } else if (active.joinAlready) {
+        // Second tap = "View my queue": jump to the active queue (its own vendor).
+        set({
+          queueSheet: false,
+          vendorId: active.orderVendorId ?? vendorId,
+          screen: 'queue',
+          joinNotice: null,
+          joinAlready: false,
+          joinFarAck: false,
+        });
+        return;
+      } else {
+        // VALIDATION: one queue place per customer. Tell them where they already are; the
+        // button flips to "View my queue" and an explicit tap confirms.
+        const token =
+          active.queueStatus?.queueToken ?? active.queueStatus?.orderNumber ?? 'your token';
+        const sameVendor = !active.orderVendorId || active.orderVendorId === vendorId;
+        const otherName = active.orderVendorId
+          ? (get().liveVendorById[active.orderVendorId]?.name ?? 'another stall')
+          : 'another stall';
+        set({
+          joinAlready: true,
+          joinFarAck: false,
+          joinNotice: sameVendor
+            ? `You're already in this queue (${token}) — one place per customer.`
+            : `You're already in the queue at ${otherName} (${token}). Exit it before joining here.`,
+        });
+        return;
+      }
     }
     const menu = get().liveVendorById[vendorId]?.items;
     const validIds = menu ? new Set(menu.map((m) => m.id)) : null;
@@ -713,11 +807,13 @@ export const useStore = create<Store>((set, get) => ({
       });
       set({
         orderId: order.id,
+        orderVendorId: vendorId,
         customerGeo: geo,
         farFromVendor: vendorGeo ? far : null,
         joinBusy: false,
         joinNotice: null,
         joinFarAck: false,
+        joinAlready: false,
         queueSheet: false,
         screen: 'queue',
         orderError: '',

@@ -386,6 +386,14 @@ export async function getQueueStatus(orderId) {
 }
 
 /**
+ * POST /orders/:id/leave — exit the waiting line BEFORE paying (join-first).
+ * Returns 200 { status: 'cancelled', message: 'left_queue' }.
+ */
+export async function leaveQueue(orderId) {
+  return request(`/orders/${orderId}/leave`, { method: 'POST', body: JSON.stringify({}) });
+}
+
+/**
  * POST /orders/:id/cancel
  * Returns 202 { accepted, message }
  */

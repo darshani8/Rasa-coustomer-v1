@@ -89,6 +89,9 @@ export interface QueueStatus {
 }
 export function getQueueStatus(orderId: string): Promise<QueueStatus>;
 
+/** Exit the waiting line before paying (join-first). */
+export function leaveQueue(orderId: string): Promise<{ status: string; message: string }>;
+
 /** Browser GPS (5s timeout); resolves null when denied or unavailable. */
 export function requestGeoLocation(): Promise<{ lat: number; lng: number } | null>;
 
