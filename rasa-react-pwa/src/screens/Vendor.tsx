@@ -108,8 +108,10 @@ export default function Vendor() {
             </div>
           </div>
           <div style={s('text-align:center;background:var(--psoft,#F7E9EC);border-radius:var(--radM,14px);padding:9px 11px;flex-shrink:0')}>
-            <div style={s("font:700 16px var(--display,'Space Grotesk');color:var(--p,#7D1535)")}>{v.rating} ★</div>
-            <div style={s("font:600 8.5px 'JetBrains Mono',monospace;color:#B98A98;letter-spacing:.5px;margin-top:2px")}>{vRatings}</div>
+            {/* No invented score before the first review — the pill reads "New" until real
+                ratings exist, then shows the true average. */}
+            <div style={s("font:700 16px var(--display,'Space Grotesk');color:var(--p,#7D1535)")}>{v.ratings === '0' ? 'New' : v.rating + ' ★'}</div>
+            <div style={s("font:600 8.5px 'JetBrains Mono',monospace;color:#B98A98;letter-spacing:.5px;margin-top:2px")}>{v.ratings === '0' ? 'no ratings yet' : vRatings}</div>
           </div>
         </div>
 
