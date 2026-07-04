@@ -194,6 +194,8 @@ export interface AppState {
   // live vendors (shaped into the mock Vendor shape). null = not loaded → mock demo data is shown.
   liveVendors: Vendor[] | null;
   liveVendorById: Record<string, Vendor>;
+  // The logged-in account (GET /auth/me) — null until fetched; the Profile page shows it.
+  me: { id: string; phone: string } | null;
   // the real backend order being paid for + its progress
   orderId: string | null;
   // Which vendor the active order/queue place belongs to — one active queue at a time; browsing
@@ -245,6 +247,8 @@ export interface AppActions {
   doResendOtp: () => Promise<void>;
   doLogout: () => void;
   bootSession: () => Promise<void>;
+  // Fetch the logged-in account for the Profile page (no-op when signed out).
+  loadMe: () => Promise<void>;
   // Verify the restored queue place against the backend (clears it when finished/foreign).
   reconcileActiveOrder: () => Promise<void>;
   loadVendors: () => Promise<void>;
@@ -369,6 +373,7 @@ const initialState: AppState = {
   pwInput: '',
   liveVendors: null,
   liveVendorById: {},
+  me: null,
   // Restore the queue place a previous session held; bootSession() verifies it server-side.
   orderId: readStoredActiveOrder()?.orderId ?? null,
   orderVendorId: readStoredActiveOrder()?.vendorId ?? null,
@@ -484,6 +489,7 @@ export const useStore = create<Store>((set, get) => ({
       set({ authed: true, authBusy: false, screen: 'home', otp: ['', '', '', '', '', ''], phoneInput: '', pwInput: '' });
       void get().loadVendors();
       void get().reconcileActiveOrder();
+      void get().loadMe();
     } catch (e) {
       set({ authBusy: false, authError: (e as Error).message || 'Invalid or expired code.' });
     }
@@ -550,6 +556,7 @@ export const useStore = create<Store>((set, get) => ({
       set({ authed: true, authBusy: false, screen: 'home', phoneInput: '', pwInput: '' });
       void get().loadVendors();
       void get().reconcileActiveOrder();
+      void get().loadMe();
     } catch (e) {
       set({ authBusy: false, authError: (e as Error).message || 'Google sign-in failed.' });
     }
@@ -567,6 +574,7 @@ export const useStore = create<Store>((set, get) => ({
       set({ authed: true, authBusy: false, screen: 'home', phoneInput: '', pwInput: '' });
       void get().loadVendors();
       void get().reconcileActiveOrder();
+      void get().loadMe();
     } catch (e) {
       set({ authBusy: false, authError: (e as Error).message || 'Sign in failed. Check your details.' });
     }
@@ -576,7 +584,7 @@ export const useStore = create<Store>((set, get) => ({
     // logout() captures the tokens before clearTokens() below removes them locally.
     void api.logout().catch(() => {});
     api.clearTokens();
-    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, orderId: null, orderVendorId: null, exitSheet: false, billOrderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, customerGeo: null, cart: {} });
+    set({ authed: false, screen: 'login', liveVendors: null, liveVendorById: {}, me: null, orderId: null, orderVendorId: null, exitSheet: false, billOrderId: null, farFromVendor: null, schedulingPlan: null, queueStatus: null, queueStatusAt: null, customerGeo: null, cart: {} });
   },
   // On boot, if the access token expired but a refresh token exists, refresh silently before deciding
   // whether to show the sign-in gate; then load live vendors when authed.
@@ -591,6 +599,16 @@ export const useStore = create<Store>((set, get) => ({
     }
     void get().loadVendors();
     void get().reconcileActiveOrder();
+    void get().loadMe();
+  },
+  loadMe: async () => {
+    if (!api.isAuthenticated()) return;
+    try {
+      const me = await api.getMe();
+      set({ me });
+    } catch {
+      /* profile falls back to a neutral placeholder; the next visit retries */
+    }
   },
   // The restored order may be finished, cancelled, or belong to a different account that last
   // used this device — ask the backend. 404 (foreign/gone) and done/cancelled clear it; a
