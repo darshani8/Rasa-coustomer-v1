@@ -1,5 +1,5 @@
 import { useStore } from '@/state/store';
-import { getVendor, orderMethodName } from '@/data';
+import { getVendor,  } from '@/data';
 import { fmt, orderBill } from '@/lib/money';
 import { cartSubtotal } from '@/state/selectors';
 import { s } from '@/lib/style';
@@ -10,17 +10,15 @@ const couponPath =
   'M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z';
 
 export default function Success() {
-  const { go, vendorId, cart, payMethod } = useStore((st) => ({
+  const { go, vendorId, cart } = useStore((st) => ({
     go: st.go,
     vendorId: st.vendorId,
     cart: st.cart,
-    payMethod: st.payMethod,
   }));
 
   const v = getVendor(vendorId);
   const bill = orderBill(cartSubtotal(v, cart));
   const moneyTotal = fmt(bill.total);
-  const payName = orderMethodName(payMethod);
 
   return (
     <div style={s('animation:rasaFade .35s ease;padding:0 22px 0;display:flex;flex-direction:column;min-height:100%')}>
@@ -48,7 +46,7 @@ export default function Success() {
           </div>
           <div style={s('text-align:right')}>
             <div style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase")}>Paid via</div>
-            <div style={s("font:700 13px var(--display,'Space Grotesk');color:#3B2630;margin-top:3px")}>{payName}</div>
+            <div style={s("font:700 13px var(--display,'Space Grotesk');color:#3B2630;margin-top:3px")}>Paid online</div>
           </div>
         </div>
         <div style={s('display:flex;align-items:center;gap:11px;background:#F4EEE7;border:1px solid #EFE9DF;border-radius:var(--radM,13px);padding:11px;margin-top:14px')}>
@@ -67,6 +65,10 @@ export default function Success() {
         <span style={s("font:500 12px 'Inter';color:#5A5368")}>
           You earned <b style={s('color:var(--p,#7D1535)')}>40 points</b> — redeem on your next order.
         </span>
+      </div>
+
+      <div style={s('text-align:center;margin-top:14px')}>
+        <span style={s("font:500 11.5px 'Inter';color:#9A93A6")}>You can rate this order from Order History once you've picked it up.</span>
       </div>
 
       <div style={s('position:sticky;bottom:0;z-index:45;margin:auto -22px 0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px')}>

@@ -62,8 +62,7 @@ export default function Street() {
               <Icon size={28} stroke="#C3BCCB" w={2} round d="M3 11l19-9-9 19-2-8-8-2z" />
             </div>
             <div style={s("font:700 15px var(--display,'Space Grotesk');color:#3B2630")}>No trucks here right now</div>
-            <div style={s("font:500 12px 'Inter';color:#9A93A6;margin-top:6px;max-width:250px;margin-left:auto;margin-right:auto")}>No open vendors on this street yet. We'll ping you the moment one rolls in.</div>
-            <button style={s("margin-top:18px;background:none;color:var(--p,#8A1538);border:1.5px solid var(--p,#8A1538);border-radius:12px;padding:11px 22px;font:700 12.5px var(--display,'Space Grotesk');cursor:pointer")}>Notify me</button>
+            <div style={s("font:500 12px 'Inter';color:#9A93A6;margin-top:6px;max-width:250px;margin-left:auto;margin-right:auto")}>No open vendors on this street right now — check back later.</div>
           </div>
         )}
         {streetVendors.map((v) => {

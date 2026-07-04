@@ -4,7 +4,7 @@ import { useStore } from './store';
 const initial = useStore.getState();
 const reset = () =>
   useStore.setState(
-    { screen: 'home', cart: {}, billAmt: 0, billOffer: null, billPay: 'gpay', vendorId: 'artiste' },
+    { screen: 'home', cart: {}, billAmt: 0, billOffer: null, vendorId: 'artiste' },
     false,
   );
 
@@ -38,20 +38,17 @@ describe('store: bill keypad', () => {
     expect(useStore.getState().screen).toBe('home');
     initial.billKey('5');
     initial.billProceed();
-    expect(useStore.getState().screen).toBe('billoffers');
+    expect(useStore.getState().screen).toBe('billsummary');
   });
 });
 
 describe('store: bill offer + payment', () => {
   beforeEach(reset);
-  it('toggles an offer and persists the payment method', () => {
+  it('toggles an offer', () => {
     initial.applyBillOffer('welcome250');
     expect(useStore.getState().billOffer).toBe('welcome250');
     initial.applyBillOffer('welcome250');
     expect(useStore.getState().billOffer).toBeNull();
-    initial.selectBillPay('card');
-    expect(useStore.getState().billPay).toBe('card');
-    expect(useStore.getState().screen).toBe('billsummary');
   });
 });
 

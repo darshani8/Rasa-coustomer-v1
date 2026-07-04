@@ -1,9 +1,16 @@
 import { useStore } from '@/state/store';
 import type { CatSort } from '@/state/store';
-import { HOME_ORDER, VENDOR_CATS, getVendor } from '@/data';
+import { HOME_ORDER, VENDOR_CATS, getVendor, type Vendor } from '@/data';
 import { toVendorCard } from '@/lib/vendorCard';
 import { s } from '@/lib/style';
 import { Icon } from '@/components';
+
+// A live vendor's real menu carries its true `cat`. Until that menu has loaded (items[] empty) we
+// don't know its categories yet, so it's simplest — and most honest — to leave it out of a named
+// category rather than guess.
+function liveVendorMatchesCat(v: Vendor, cat: string): boolean {
+  return v.items.length > 0 && v.items.some((it) => it.cat === cat);
+}
 
 const SORT_CHIPS: { k: CatSort; label: string }[] = [
   { k: 'wait', label: 'Shortest queue' },
@@ -16,9 +23,12 @@ export default function CatResults() {
   const setCatSort = useStore((st) => st.setCatSort);
   const go = useStore((st) => st.go);
   const openVendor = useStore((st) => st.openVendor);
+  const liveVendors = useStore((st) => st.liveVendors);
 
   const fc = foodCat;
-  const vendors = HOME_ORDER.filter((id) => fc !== 'All' && (VENDOR_CATS[id] ?? []).includes(fc)).map((id) => getVendor(id));
+  const mockVendors = HOME_ORDER.filter((id) => fc !== 'All' && (VENDOR_CATS[id] ?? []).includes(fc)).map((id) => getVendor(id));
+  const liveMatches = (liveVendors ?? []).filter((v) => fc !== 'All' && liveVendorMatchesCat(v, fc));
+  const vendors = [...mockVendors, ...liveMatches];
   const sorted = catSort === 'rating' ? [...vendors].sort((a, b) => b.rating - a.rating) : [...vendors].sort((a, b) => a.wait - b.wait);
   const cards = sorted.map(toVendorCard);
 

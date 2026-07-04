@@ -39,18 +39,18 @@ export default function Support() {
             </div>
             <span style={s("font:700 11.5px var(--display,'Space Grotesk');color:#3B2630")}>Live Chat</span>
           </button>
-          <button style={s('display:flex;flex-direction:column;align-items:center;gap:9px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,16px);padding:15px 8px;cursor:pointer')}>
+          <a href="tel:+918004727272" style={s('display:flex;flex-direction:column;align-items:center;gap:9px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,16px);padding:15px 8px;cursor:pointer;text-decoration:none')}>
             <div style={s('width:40px;height:40px;border-radius:12px;background:var(--asoft,#EEF1DC);display:flex;align-items:center;justify-content:center')}>
               <Icon size={19} stroke="var(--adeep,#6E7A38)" w={2.1} d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z" />
             </div>
             <span style={s("font:700 11.5px var(--display,'Space Grotesk');color:#3B2630")}>Call Us</span>
-          </button>
-          <button style={s('display:flex;flex-direction:column;align-items:center;gap:9px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,16px);padding:15px 8px;cursor:pointer')}>
+          </a>
+          <a href="mailto:support@rasa.app" style={s('display:flex;flex-direction:column;align-items:center;gap:9px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,16px);padding:15px 8px;cursor:pointer;text-decoration:none')}>
             <div style={s('width:40px;height:40px;border-radius:12px;background:#F4EEE7;display:flex;align-items:center;justify-content:center')}>
               <Icon size={19} stroke="var(--p,#7D1535)" w={2.1}><rect x="2" y="4" width="20" height="16" rx="3" /><path d="m2 7 10 6 10-6" /></Icon>
             </div>
             <span style={s("font:700 11.5px var(--display,'Space Grotesk');color:#3B2630")}>Email</span>
-          </button>
+          </a>
         </div>
 
         {/* topics */}

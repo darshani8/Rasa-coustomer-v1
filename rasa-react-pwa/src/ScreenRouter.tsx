@@ -24,19 +24,18 @@ const SCREENS: Record<Screen, LazyExoticComponent<ComponentType>> = {
   signup: lazy(() => import('@/screens/Signup')),
   otp: lazy(() => import('@/screens/Otp')),
   booking: lazy(() => import('@/screens/Booking')),
-  pay: lazy(() => import('@/screens/Pay')),
   success: lazy(() => import('@/screens/Success')),
   failed: lazy(() => import('@/screens/Failed')),
   queue: lazy(() => import('@/screens/Queue')),
   billamount: lazy(() => import('@/screens/BillAmount')),
   billoffers: lazy(() => import('@/screens/BillOffers')),
   billsummary: lazy(() => import('@/screens/BillSummary')),
-  paymethod: lazy(() => import('@/screens/PayMethod')),
   alloffers: lazy(() => import('@/screens/AllOffers')),
   billsuccess: lazy(() => import('@/screens/BillSuccess')),
   profile: lazy(() => import('@/screens/Profile')),
   orders: lazy(() => import('@/screens/Orders')),
   offers: lazy(() => import('@/screens/OrderDetails')),
+  legal: lazy(() => import('@/screens/Legal')),
 };
 
 export function ScreenRouter() {

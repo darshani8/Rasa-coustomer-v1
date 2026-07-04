@@ -29,7 +29,15 @@ const BASE = (RAW_BASE || DEFAULT_BASE).replace(/\/$/, '');
 // Auth endpoints authenticate via the request body (credentials / OTP / refresh token), NOT the
 // access token — so a 401 from them means "bad credentials", never "token expired". They must skip
 // the refresh-retry path so the server's real error message reaches the UI.
-const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/verify-otp', '/auth/resend-otp', '/auth/refresh'];
+const AUTH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/verify-otp',
+  '/auth/resend-otp',
+  '/auth/refresh',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+];
 const isAuthPath = (path) => AUTH_PATHS.some((p) => path.startsWith(p));
 
 // ---- token storage -------------------------------------------------------
@@ -197,12 +205,14 @@ export async function login({ phone, password }) {
  * POST /orders/bill — settle a counter bill of `amountPaise` (integer paise string) with the
  * vendor through the normal payment pipeline. Same Order shape back (kind='bill').
  */
-export async function createBillOrder({ vendorId, amountPaise, idempotencyKey }) {
+export async function createBillOrder({ vendorId, amountPaise, idempotencyKey, couponCode }) {
   if (!idempotencyKey) throw new Error('createBillOrder requires an idempotencyKey');
   return request('/orders/bill', {
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify({ vendorId, amountPaise }),
+    // amountPaise is the GROSS bill; the server computes any coupon discount and charges the
+    // payable (the response carries billGrossPaise/billDiscountPaise/billCouponCode).
+    body: JSON.stringify({ vendorId, amountPaise, ...(couponCode ? { couponCode } : {}) }),
   });
 }
 
@@ -478,4 +488,56 @@ export async function getMyOrders({ limit = 20, cursor, status } = {}) {
   if (cursor) qs.set('cursor', cursor);
   if (status) qs.set('status', status);
   return request(`/me/orders?${qs}`);
+}
+
+// ---- ratings (customer submits) --------------------------------------------
+
+/**
+ * POST /ratings  { orderId, stars (1-5 int), comment? (<=500 chars) }
+ * Returns 201 { status: 'recorded' } or 200 { status: 'already_rated' }. Only the order's owner
+ * may rate, and only a collected/completed order (the backend 400s otherwise).
+ */
+export async function submitRating({ orderId, stars, comment }) {
+  return request('/ratings', {
+    method: 'POST',
+    body: JSON.stringify({ orderId, stars, ...(comment ? { comment } : {}) }),
+  });
+}
+
+// ---- support tickets --------------------------------------------------------
+
+/**
+ * POST /support/tickets  { category (1-60 chars), message (1-2000 chars) }
+ * Returns 201 { id, status: 'open' }.
+ */
+export async function submitTicket({ category, message }) {
+  return request('/support/tickets', {
+    method: 'POST',
+    body: JSON.stringify({ category, message }),
+  });
+}
+
+// ---- password reset (forgot / OTP reset) -----------------------------------
+
+/**
+ * POST /auth/forgot-password  { phone }
+ * Sends a reset OTP to the given phone. Public — no Bearer required.
+ */
+export async function forgotPassword({ phone }) {
+  return request('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ phone }),
+  });
+}
+
+/**
+ * POST /auth/reset-password  { phone, otp, newPassword }
+ * Verifies the OTP and sets the new password; invalidates all existing sessions on success —
+ * the caller must send the customer back through login afterwards.
+ */
+export async function resetPassword({ phone, otp, newPassword }) {
+  return request('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ phone, otp, newPassword }),
+  });
 }

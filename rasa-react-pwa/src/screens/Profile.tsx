@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useStore, type Screen } from '@/state/store';
 import { s } from '@/lib/style';
-import { Icon } from '@/components';
+import { Icon, BottomSheet } from '@/components';
 
 interface GridItem { label: string; sub?: string; icon: string; go?: Screen; subKey?: 'language'; }
 
@@ -16,34 +16,16 @@ const orders: GridItem[] = [
   { label: 'Reorder', sub: 'Buy again', icon: 'M3 2v6h6M21 22v-6h-6M3.5 13a9 9 0 0 0 15 5.7L21 16M21 11a9 9 0 0 0-15-5.7L3 8', go: 'orders' },
 ];
 
+// Real payments — no wallet exists, so it isn't listed here.
 const payments: GridItem[] = [
-  { label: 'Wallet', sub: '₹560.00', icon: 'M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5M16 12h.01' },
-  { label: 'Payment Methods', sub: 'UPI, Cards', icon: 'M2 5h20v14H2zM2 10h20' },
-  { label: 'Transactions', sub: 'History', icon: 'M4 2v20l2-1.5L8 22l2-1.5L12 22l2-1.5L16 22l2-1.5L20 22V2l-2 1.5L16 2l-2 1.5L12 2l-2 1.5L8 2 6 3.5zM8 8h8M8 12h6' },
-  { label: 'Offers & Coupons', sub: '7 Available', icon: 'M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z', go: 'offers' },
-];
-
-const favorites: GridItem[] = [
-  { label: 'Favorite Restaurants', sub: '12 Saved', icon: 'M19 14c1.5-1.5 3-3.3 3-5.5A5.5 5.5 0 0 0 12 5 5.5 5.5 0 0 0 2 8.5c0 2.2 1.5 4 3 5.5l7 7Z' },
-  { label: 'Favorite Dishes', sub: '18 Saved', icon: 'M3 15h18a9 9 0 0 0-18 0ZM12 6V3M2 19h20' },
-  { label: 'Saved Addresses', sub: '5 Addresses', icon: 'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z', go: 'editaddress' },
-];
-
-const preference: GridItem[] = [
-  { label: 'Language', subKey: 'language', icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10ZM2 12h20M12 2a15 0 0 1 0 20 15 0 0 1 0-20', go: 'language' },
-  { label: 'Notifications', sub: 'Manage', icon: bellPath, go: 'notifs' },
+  { label: 'Transactions', sub: 'Your payments', icon: 'M4 2v20l2-1.5L8 22l2-1.5L12 22l2-1.5L16 22l2-1.5L20 22V2l-2 1.5L16 2l-2 1.5L12 2l-2 1.5L8 2 6 3.5zM8 8h8M8 12h6', go: 'orders' },
+  { label: 'Offers & Coupons', sub: 'WELCOME250 & more', icon: 'M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z', go: 'offers' },
 ];
 
 const support: GridItem[] = [
   { label: 'Help Center', sub: 'FAQs & Articles', icon: 'M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z', go: 'support' },
   { label: 'Contact Support', sub: 'Chat or Call', icon: 'M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.9-.9L3 20l1.9-5.6a8.5 8.5 0 0 1-.9-3.9A8.38 8.38 0 0 1 12.5 2 8.38 8.38 0 0 1 21 10.5z', go: 'chat' },
   { label: 'Report an Issue', sub: 'Let us know', icon: 'M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01', go: 'ticket' },
-];
-
-const security: GridItem[] = [
-  { label: 'Change Password', sub: 'Update your password', icon: 'M3 11h18v11H3zM7 11V7a5 5 0 0 1 10 0v4' },
-  { label: 'Two-Step Verification', sub: 'Add extra security', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zm-3-10 2 2 4-4' },
-  { label: 'Manage Devices', sub: 'Logged in devices', icon: 'M5 2h14v20H5zM11 18h2' },
 ];
 
 const legal: GridItem[] = [
@@ -109,13 +91,48 @@ function formatPhone(phone: string): string {
 }
 
 export default function Profile() {
-  const { go, language, me, orderId, queueStatus, doLogout } = useStore((st) => ({
+  const {
+    go,
+    language,
+    me,
+    orderId,
+    queueStatus,
+    doLogout,
+    favIds,
+    address,
+    pwResetSheet,
+    pwResetStep,
+    pwResetBusy,
+    pwResetError,
+    pwResetOtp,
+    pwResetNew,
+    openChangePassword,
+    closeChangePassword,
+    requestPasswordOtp,
+    setPwResetOtp,
+    setPwResetNew,
+    confirmPasswordReset,
+  } = useStore((st) => ({
     go: st.go,
     language: st.language,
     me: st.me,
     orderId: st.orderId,
     queueStatus: st.queueStatus,
     doLogout: st.doLogout,
+    favIds: st.favIds,
+    address: st.address,
+    pwResetSheet: st.pwResetSheet,
+    pwResetStep: st.pwResetStep,
+    pwResetBusy: st.pwResetBusy,
+    pwResetError: st.pwResetError,
+    pwResetOtp: st.pwResetOtp,
+    pwResetNew: st.pwResetNew,
+    openChangePassword: st.openChangePassword,
+    closeChangePassword: st.closeChangePassword,
+    requestPasswordOtp: st.requestPasswordOtp,
+    setPwResetOtp: st.setPwResetOtp,
+    setPwResetNew: st.setPwResetNew,
+    confirmPasswordReset: st.confirmPasswordReset,
   }));
 
   // The real account: phone from GET /auth/me (null while loading / signed out → placeholders).
@@ -126,6 +143,15 @@ export default function Profile() {
   const hasActive = Boolean(orderId) && zone !== 'done' && zone !== 'cancelled';
   const activeSub = hasActive ? `1 active${queueStatus?.queueToken ? ` · ${queueStatus.queueToken}` : ''}` : 'None right now';
 
+  const favorites: GridItem[] = [
+    { label: 'Favorite Restaurants', sub: `${favIds.length} Saved`, icon: 'M19 14c1.5-1.5 3-3.3 3-5.5A5.5 5.5 0 0 0 12 5 5.5 5.5 0 0 0 2 8.5c0 2.2 1.5 4 3 5.5l7 7Z', go: 'home' },
+    { label: 'Saved Addresses', sub: address.line1 ? `${address.label} · ${address.line2 || address.line1}` : 'Add one', icon: 'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z', go: 'editaddress' },
+  ];
+
+  const preference: GridItem[] = [
+    { label: 'Language', subKey: 'language', icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10ZM2 12h20M12 2a15 0 0 1 0 20 15 0 0 1 0-20', go: 'language' },
+    { label: 'Notifications', sub: 'Manage', icon: bellPath, go: 'notifs' },
+  ];
 
   return (
     <div style={s('animation:rasaFade .35s ease;padding-bottom:28px')}>
@@ -170,7 +196,7 @@ export default function Profile() {
         </button>
       </Section>
 
-      <Section title="PAYMENT & WALLET" bg="#FBEBEF" border="#F3D7DE">
+      <Section title="PAYMENTS" bg="#FBEBEF" border="#F3D7DE">
         <Grid4 items={payments} onClick={go} />
       </Section>
 
@@ -202,7 +228,19 @@ export default function Profile() {
       </Section>
 
       <Section title="SECURITY" bg="#FBF4E4" border="#F0E4C9">
-        <Grid3 items={security} onClick={() => {}} />
+        <button
+          onClick={openChangePassword}
+          style={s('width:100%;display:flex;align-items:center;gap:11px;background:#fff;border:1px solid #EFE7DC;border-radius:14px;padding:13px 14px;cursor:pointer;text-align:left')}
+        >
+          <div style={s('width:36px;height:36px;border-radius:10px;background:#FBEBD2;display:flex;align-items:center;justify-content:center;flex-shrink:0')}>
+            <Icon size={18} stroke="#B07A2B" w={2} round d="M3 11h18v11H3zM7 11V7a5 5 0 0 1 10 0v4" />
+          </div>
+          <div style={s('flex:1;min-width:0')}>
+            <div style={s("font:700 12.5px 'Inter';color:#3B2630")}>Change Password</div>
+            <div style={s("font:500 10.5px 'Inter';color:#9A93A6;margin-top:2px")}>Send a code to your number and set a new one</div>
+          </div>
+          <Icon size={16} stroke="#C3BCCB" w={2.4} d={chevRPath} />
+        </button>
       </Section>
 
       <Section title="LEGAL" bg="#F2EEE9" border="#E5DED4">
@@ -210,6 +248,7 @@ export default function Profile() {
           {legal.map((it) => (
             <button
               key={it.label}
+              onClick={() => go('legal')}
               style={s('background:#fff;border:1px solid #EFE7DC;border-radius:14px;padding:14px 5px 11px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;text-align:center')}
             >
               <Icon size={21} stroke="#6B6156" w={2} round d={it.icon} />
@@ -231,6 +270,75 @@ export default function Profile() {
           <Icon size={17} stroke="#C0392B" w={2.4} d={chevRPath} />
         </button>
       </div>
+
+      <BottomSheet open={pwResetSheet} onClose={closeChangePassword} height="auto" ariaLabel="Change password">
+        <div style={s('padding:20px 22px 26px')}>
+          <div style={s("font:700 17px var(--display,'Space Grotesk');color:#3B2630;margin-bottom:14px")}>Change password</div>
+
+          {pwResetStep === 'idle' && (
+            <>
+              <div style={s("font:500 12.5px 'Inter';color:#6F6A7D;line-height:1.5;margin-bottom:16px")}>
+                We&apos;ll text a code to {me ? formatPhone(me.phone) : 'your number'} to confirm it&apos;s you.
+              </div>
+              {pwResetError && <div style={s("font:500 12px 'Inter';color:#C0392B;margin-bottom:12px")}>{pwResetError}</div>}
+              <button
+                onClick={() => void requestPasswordOtp()}
+                disabled={pwResetBusy}
+                style={s(`width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:14px;padding:15px;font:700 13px var(--display,'Space Grotesk');cursor:pointer;${pwResetBusy ? 'opacity:.6' : ''}`)}
+              >
+                {pwResetBusy ? 'Sending…' : 'Send code'}
+              </button>
+            </>
+          )}
+
+          {pwResetStep === 'otp-sent' && (
+            <>
+              <div style={s("font:500 12.5px 'Inter';color:#6F6A7D;line-height:1.5;margin-bottom:14px")}>
+                Enter the code we sent, and your new password.
+              </div>
+              {pwResetError && <div style={s("font:500 12px 'Inter';color:#C0392B;margin-bottom:12px")}>{pwResetError}</div>}
+              <input
+                value={pwResetOtp}
+                onChange={(e) => setPwResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6-digit code"
+                inputMode="numeric"
+                style={s("width:100%;background:#F4EEE7;border:1px solid #ECE6DB;border-radius:12px;padding:13px 14px;font:600 14px 'JetBrains Mono',monospace;color:#3B2630;outline:none;box-sizing:border-box;margin-bottom:10px")}
+              />
+              <input
+                value={pwResetNew}
+                onChange={(e) => setPwResetNew(e.target.value)}
+                type="password"
+                placeholder="New password (min 8 characters)"
+                style={s("width:100%;background:#F4EEE7;border:1px solid #ECE6DB;border-radius:12px;padding:13px 14px;font:500 13px 'Inter';color:#3B2630;outline:none;box-sizing:border-box;margin-bottom:14px")}
+              />
+              <button
+                onClick={() => void confirmPasswordReset()}
+                disabled={pwResetBusy}
+                style={s(`width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:14px;padding:15px;font:700 13px var(--display,'Space Grotesk');cursor:pointer;${pwResetBusy ? 'opacity:.6' : ''}`)}
+              >
+                {pwResetBusy ? 'Updating…' : 'Update password'}
+              </button>
+            </>
+          )}
+
+          {pwResetStep === 'done' && (
+            <>
+              <div style={s("font:500 12.5px 'Inter';color:#6F6A7D;line-height:1.5;margin-bottom:16px")}>
+                Password changed. For your security we&apos;ve signed you out everywhere — please sign in again.
+              </div>
+              <button
+                onClick={() => {
+                  closeChangePassword();
+                  doLogout();
+                }}
+                style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:14px;padding:15px;font:700 13px var(--display,'Space Grotesk');cursor:pointer")}
+              >
+                Back to sign in
+              </button>
+            </>
+          )}
+        </div>
+      </BottomSheet>
     </div>
   );
 }

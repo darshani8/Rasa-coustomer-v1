@@ -7,12 +7,43 @@ const TICKET_CATS = ['Order issue', 'Payment / Refund', 'Queue / Wait time', 'Ap
 export default function Ticket() {
   const ticketCat = useStore((st) => st.ticketCat);
   const ticketText = useStore((st) => st.ticketText);
+  const ticketBusy = useStore((st) => st.ticketBusy);
+  const ticketError = useStore((st) => st.ticketError);
+  const ticketResult = useStore((st) => st.ticketResult);
   const go = useStore((st) => st.go);
   const setTicketCat = useStore((st) => st.setTicketCat);
   const setTicketText = useStore((st) => st.setTicketText);
   const submitTicket = useStore((st) => st.submitTicket);
 
-  const ticketCanSubmit = ticketText.trim().length > 0;
+  const ticketCanSubmit = ticketText.trim().length > 0 && !ticketBusy;
+
+  if (ticketResult) {
+    return (
+      <div style={s('animation:rasaFade .35s ease;display:flex;flex-direction:column;min-height:100%')}>
+        <div style={s('position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:rgba(250,246,243,.92);backdrop-filter:blur(10px);border-bottom:1px solid #EFE9DF')}>
+          <button onClick={() => go('support')} aria-label="Back" style={s('width:36px;height:36px;border-radius:12px;background:#fff;border:1px solid #ECE6DB;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
+            <Icon size={18} stroke="#3B2630" w={2.4} d={ICON.back} />
+          </button>
+          <span style={s("font:700 17px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.3px")}>Raise a ticket</span>
+        </div>
+        <div style={s('flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center')}>
+          <div style={s('width:64px;height:64px;border-radius:50%;background:#E4F4EC;display:flex;align-items:center;justify-content:center;margin-bottom:16px')}>
+            <Icon size={28} stroke="#2F9E6E" w={2.6} round d={ICON.check} />
+          </div>
+          <div style={s("font:700 17px var(--display,'Space Grotesk');color:#3B2630")}>Ticket received</div>
+          <div style={s("font:500 12.5px 'Inter';color:#9A93A6;margin-top:8px;line-height:1.5;max-width:260px")}>
+            We&apos;ll get back to you soon. Reference <b style={s('color:#3B2630')}>{ticketResult.id}</b>.
+          </div>
+          <button
+            onClick={() => go('support')}
+            style={s("margin-top:22px;background:var(--p,#7D1535);color:#fff;border:none;border-radius:14px;padding:13px 26px;font:700 13px var(--display,'Space Grotesk');cursor:pointer")}
+          >
+            Back to Help &amp; Support
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={s('animation:rasaFade .35s ease;display:flex;flex-direction:column;min-height:100%')}>
@@ -49,10 +80,15 @@ export default function Ticket() {
           style={s("width:100%;height:130px;resize:none;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,16px);padding:14px;font:500 13px/1.6 'Inter';color:#3B2630;outline:none;box-sizing:border-box")}
         />
 
-        <button style={s('display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:none;border:1.5px dashed #D6C2C7;border-radius:var(--radM,14px);padding:14px;cursor:pointer;margin-top:13px')}>
-          <Icon size={17} stroke="var(--p,#7D1535)" w={2.2} d="M21.4 11.05 12 20.5a5.5 5.5 0 0 1-7.8-7.8l9.2-9.2a3.7 3.7 0 0 1 5.2 5.2l-9.2 9.2a1.8 1.8 0 0 1-2.6-2.6l8.5-8.5" />
-          <span style={s("font:700 12.5px var(--display,'Space Grotesk');color:var(--p,#7D1535)")}>Attach a screenshot</span>
-        </button>
+        {ticketError && (
+          <div style={s('display:flex;align-items:flex-start;gap:9px;background:#FBE7EC;border:1px solid #F3D0D9;border-radius:var(--radM,13px);padding:12px 14px;margin-top:16px')}>
+            <Icon size={16} stroke="#C0392B" w={2.2} css="flex-shrink:0;margin-top:1px">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4M12 8h.01" />
+            </Icon>
+            <span style={s("font:500 11.5px 'Inter';color:#C0392B;line-height:1.5")}>{ticketError}</span>
+          </div>
+        )}
 
         <div style={s('display:flex;align-items:flex-start;gap:9px;background:var(--asoft,#EEF1DC);border:1px solid var(--aborder,#DCE3C0);border-radius:var(--radM,13px);padding:12px 14px;margin-top:16px')}>
           <Icon size={16} stroke="var(--adeep,#6E7A38)" w={2.2} css="flex-shrink:0;margin-top:1px">
@@ -65,13 +101,13 @@ export default function Ticket() {
 
       <div style={s('position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px;z-index:45')}>
         {ticketCanSubmit && (
-          <button onClick={submitTicket} style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13px var(--display,'Space Grotesk');letter-spacing:.5px;cursor:pointer")}>
-            Submit ticket
+          <button onClick={() => void submitTicket()} style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13px var(--display,'Space Grotesk');letter-spacing:.5px;cursor:pointer")}>
+            {ticketBusy ? 'Submitting…' : 'Submit ticket'}
           </button>
         )}
         {!ticketCanSubmit && (
           <button disabled style={s("width:100%;background:#E7D6DB;color:#B79AA2;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13px var(--display,'Space Grotesk');letter-spacing:.5px;cursor:not-allowed")}>
-            Submit ticket
+            {ticketBusy ? 'Submitting…' : 'Submit ticket'}
           </button>
         )}
       </div>

@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useStore } from '@/state/store';
-import { getVendor, HOME_ORDER, VENDORS } from '@/data';
+import { BILL_OFFERS, getVendor, HOME_ORDER, VENDORS } from '@/data';
 import { toVendorCard } from '@/lib/vendorCard';
 import { s } from '@/lib/style';
 import { fmt } from '@/lib/money';
@@ -7,6 +8,16 @@ import { useMediaQuery } from '@/lib/useMediaQuery';
 import { cartSubtotal, menuGroups } from '@/state/selectors';
 import { Icon, VendorCard } from '@/components';
 import type { VendorTab } from '@/state/store';
+
+const directionsPath = 'M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z';
+const savePath = 'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z';
+const callPath =
+  'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z';
+
+const quickActionStyle =
+  "flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,13px);padding:11px 0;cursor:pointer;font:600 12px 'Inter';color:#5A5368;text-decoration:none;box-sizing:border-box";
+const quickActionSavedStyle =
+  quickActionStyle + ';background:var(--psoft,#F7E9EC);border-color:var(--pborder,#EAC9D1);color:var(--p,#7D1535)';
 
 export default function Vendor() {
   const vendorId = useStore((st) => st.vendorId);
@@ -22,6 +33,10 @@ export default function Vendor() {
 
   const liveVendors = useStore((st) => st.liveVendors);
   const liveV = useStore((st) => st.liveVendorById[vendorId]);
+  const favIds = useStore((st) => st.favIds);
+  const toggleFavorite = useStore((st) => st.toggleFavorite);
+
+  const [justShared, setJustShared] = useState(false);
 
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const allVendors = (liveVendors ?? HOME_ORDER.map((id) => VENDORS[id]!).filter((x): x is NonNullable<typeof x> => Boolean(x))).map(toVendorCard);
@@ -32,8 +47,26 @@ export default function Vendor() {
   const subtotal = cartSubtotal(v, cart);
   const groups = menuGroups(v, cart);
   const reviews = v.reviews.map((r) => ({ ...r, initial: r.author.charAt(0) }));
+  const isSaved = favIds.includes(v.id);
+  const hasRealPhone = Boolean(v.phone) && v.phone !== '—';
+  const directionsHref = v.geo ? `https://www.google.com/maps/dir/?api=1&destination=${v.geo.lat},${v.geo.lng}` : null;
 
-  const offerMin = fmt(499);
+  const handleShare = () => {
+    const shareData = { title: v.name, text: `${v.name} — order ahead on Rasa`, url: window.location.href };
+    const nav = navigator as Navigator & { share?: (d: typeof shareData) => Promise<void> };
+    if (nav.share) {
+      nav.share(shareData).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard
+        .writeText(shareData.url)
+        .then(() => {
+          setJustShared(true);
+          setTimeout(() => setJustShared(false), 2000);
+        })
+        .catch(() => {});
+    }
+  };
+
   const cb = fmt(50);
 
   // cart lines for the Offers tab
@@ -79,13 +112,17 @@ export default function Vendor() {
           <Icon size={18} stroke="#3B2630" w={2.4} d="m15 18-6-6 6-6" />
         </button>
         <span style={s("font:700 14px var(--display,'Space Grotesk');color:#3B2630")}>{v.name}</span>
-        <button aria-label="Share" style={s('width:36px;height:36px;border-radius:12px;background:#fff;border:1px solid #ECE6DB;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
-          <Icon size={16} stroke="#3B2630" w={2.2}>
-            <circle cx="18" cy="5" r="3" />
-            <circle cx="6" cy="12" r="3" />
-            <circle cx="18" cy="19" r="3" />
-            <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
-          </Icon>
+        <button onClick={handleShare} aria-label="Share" style={s('width:36px;height:36px;border-radius:12px;background:#fff;border:1px solid #ECE6DB;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
+          {justShared ? (
+            <Icon size={16} stroke="#2F9E6E" w={2.6} round d="m5 12 5 5 9-10" />
+          ) : (
+            <Icon size={16} stroke="#3B2630" w={2.2}>
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
+            </Icon>
+          )}
         </button>
       </div>
 
@@ -141,17 +178,27 @@ export default function Vendor() {
           </button>
         </div>
 
-        {/* quick actions */}
+        {/* quick actions — Directions/Call only appear when the data behind them is real */}
         <div style={s('display:flex;gap:9px;margin-top:12px')}>
-          <button style={s("flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,13px);padding:11px 0;cursor:pointer;font:600 12px 'Inter';color:#5A5368")}>
-            <Icon size={15} stroke="var(--p,#7D1535)" w={2.2}>
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-              <circle cx="12" cy="10" r="2.6" />
-            </Icon>Directions</button>
-          <button style={s("flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,13px);padding:11px 0;cursor:pointer;font:600 12px 'Inter';color:#5A5368")}>
-            <Icon size={15} stroke="var(--p,#7D1535)" w={2.2} d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z" />Call</button>
-          <button style={s("flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#fff;border:1px solid #ECE6DB;border-radius:var(--radM,13px);padding:11px 0;cursor:pointer;font:600 12px 'Inter';color:#5A5368")}>
-            <Icon size={15} stroke="var(--p,#7D1535)" w={2.2} round d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />Save</button>
+          {directionsHref && (
+            <a href={directionsHref} target="_blank" rel="noopener noreferrer" style={s(quickActionStyle)}>
+              <Icon size={15} stroke="var(--p,#7D1535)" w={2.2}>
+                <path d={directionsPath} />
+                <circle cx="12" cy="10" r="2.6" />
+              </Icon>
+              Directions
+            </a>
+          )}
+          {hasRealPhone && (
+            <a href={`tel:${v.phone.replace(/\s+/g, '')}`} style={s(quickActionStyle)}>
+              <Icon size={15} stroke="var(--p,#7D1535)" w={2.2} d={callPath} />
+              Call
+            </a>
+          )}
+          <button onClick={() => toggleFavorite(v.id)} style={s(isSaved ? quickActionSavedStyle : quickActionStyle)}>
+            <Icon size={15} stroke="var(--p,#7D1535)" fill={isSaved ? 'var(--p,#7D1535)' : 'none'} w={2.2} round d={savePath} />
+            {isSaved ? 'Saved' : 'Save'}
+          </button>
         </div>
       </div>
 
@@ -208,17 +255,20 @@ export default function Vendor() {
         {/* OFFERS */}
         {showOffers && (
           <>
-            <div style={s("font:700 14px var(--display,'Space Grotesk');color:#3B2630;margin-bottom:12px")}>Available offers</div>
-            <div style={s('background:linear-gradient(135deg,var(--p,#7D1535),var(--p2,#9E2A48));border-radius:var(--radL,18px);padding:16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:11px')}>
-              <div style={s('display:flex;align-items:center;gap:12px')}>
-                <div style={s("width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font:700 16px var(--display,'Space Grotesk');color:#fff")}>%</div>
+            <div style={s("font:700 14px var(--display,'Space Grotesk');color:#3B2630;margin-bottom:8px")}>Available offers</div>
+            <div style={s('display:flex;align-items:flex-start;gap:8px;background:var(--asoft,#EEF1DC);border:1px solid var(--aborder,#DCE3C0);border-radius:var(--radM,13px);padding:10px 12px;margin-bottom:12px')}>
+              <Icon size={15} stroke="var(--adeep,#6E7A38)" w={2.2} css="flex-shrink:0;margin-top:1px" d="M12 16v-4M12 8h.01" />
+              <span style={s("font:500 11px 'Inter';color:var(--adeep,#6E7A38);line-height:1.45")}>Offers apply to Pay-bill payments — this order's total is fixed by the vendor.</span>
+            </div>
+            {BILL_OFFERS.map((o) => (
+              <div key={o.id} style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,18px);padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:11px')}>
+                <div style={s("width:40px;height:40px;border-radius:12px;background:var(--psoft,#F7E9EC);display:flex;align-items:center;justify-content:center;font:700 16px var(--display,'Space Grotesk');color:var(--p,#7D1535)")}>%</div>
                 <div>
-                  <div style={s("font:700 14px var(--display,'Space Grotesk');color:#fff")}>Get 20% OFF</div>
-                  <div style={s("font:500 11px 'Inter';color:rgba(255,255,255,.8)")}>On orders above {offerMin}</div>
+                  <div style={s("font:700 13px var(--display,'Space Grotesk');color:#3B2630")}>{o.title}</div>
+                  <div style={s("font:500 11px 'Inter';color:#9A93A6;margin-top:2px")}>{o.desc}</div>
                 </div>
               </div>
-              <span style={s("font:700 11px 'Inter';color:#fff;background:rgba(255,255,255,.18);padding:6px 11px;border-radius:8px")}>APPLY</span>
-            </div>
+            ))}
             <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radL,18px);padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:22px')}>
               <div style={s('width:40px;height:40px;border-radius:12px;background:var(--asoft,#EEF1DC);display:flex;align-items:center;justify-content:center')}>
                 <Icon size={18} stroke="var(--a,#9BAA5C)" w={2.2}>

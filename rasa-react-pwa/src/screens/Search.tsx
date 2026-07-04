@@ -13,12 +13,13 @@ const truckPath = 'M14 18V6a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h2M14 
 const suggestions = ['Biryani', 'Dosa', 'Pani Puri', 'Tikka', 'Chai'];
 
 export default function Search() {
-  const { go, query, setSearchQuery, clearSearch, openVendor } = useStore((st) => ({
+  const { go, query, setSearchQuery, clearSearch, openVendor, liveVendors } = useStore((st) => ({
     go: st.go,
     query: st.searchQuery,
     setSearchQuery: st.setSearchQuery,
     clearSearch: st.clearSearch,
     openVendor: st.openVendor,
+    liveVendors: st.liveVendors,
   }));
 
   const q = query.trim().toLowerCase();
@@ -41,6 +42,21 @@ export default function Search() {
       };
     });
 
+    // Real, signed-in vendors: matched on name only (their menus load lazily on open, so a dish
+    // match here would silently miss most of the catalogue).
+    (liveVendors ?? [])
+      .filter((v) => v.name.toLowerCase().includes(q))
+      .forEach((v) => {
+        matchedTrucks.push({
+          id: v.id,
+          name: v.name,
+          cuisine: v.cuisine,
+          photo: v.banner,
+          waitLabel: `${v.wait} min queue`,
+          rating: v.rating,
+        });
+      });
+
     const matchedDishes: { id: string; name: string; desc: string; img: string; priceLabel: string; vendorName: string; vendorId: string }[] = [];
     HOME_ORDER.forEach((id) => {
       const v = getVendor(id);
@@ -60,7 +76,7 @@ export default function Search() {
     });
 
     return { trucks: matchedTrucks, dishes: matchedDishes.slice(0, 8) };
-  }, [q, active]);
+  }, [q, active, liveVendors]);
 
   const hasResults = trucks.length > 0 || dishes.length > 0;
   const noResults = active && !hasResults;
