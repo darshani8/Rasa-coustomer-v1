@@ -72,13 +72,19 @@ export function getOrder(id: string): Promise<BackendOrder>;
 export interface QueueStatus {
   orderId: string;
   orderNumber: string;
+  /** Per-vendor daily queue number ("A-07") — the number the vendor also sees. */
+  queueToken: string | null;
   status: string;
   position: number | null;
   aheadCount: number | null;
   nowServingOrderNumber: string | null;
+  /** The joined members of the line, in order (display tokens, capped). */
+  queueTokens: string[];
   estimatedWaitMinutes: number | null;
   zone: 'waiting' | 'payment' | 'collection' | 'done' | 'cancelled';
   payWindowExpiresAtMs: number | null;
+  /** Barrier B: the counter is full — pay windows are paused/frozen until it drains. */
+  paymentsPaused: boolean;
   vendorLocation: { lat: number; lng: number } | null;
 }
 export function getQueueStatus(orderId: string): Promise<QueueStatus>;

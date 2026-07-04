@@ -14,7 +14,7 @@ const cardPath = 'M2 5h20v14H2zM2 10h20';
 const bagPath = 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4ZM3 6h18M16 10a4 4 0 0 1-8 0';
 
 export default function Queue() {
-  const { go, vendorId, qSec, cart, add, remove, liveV, farFromVendor, schedulingPlan, orderId, queueStatus, queueStatusAt, customerGeo, pollQueueStatus } = useStore((st) => ({
+  const { go, vendorId, qSec, cart, add, remove, liveV, farFromVendor, schedulingPlan, orderId, queueStatus, queueStatusAt, customerGeo, pollQueueStatus, payCurrentOrder, orderBusy } = useStore((st) => ({
     go: st.go,
     vendorId: st.vendorId,
     qSec: st.qSec,
@@ -29,6 +29,8 @@ export default function Queue() {
     queueStatusAt: st.queueStatusAt,
     customerGeo: st.customerGeo,
     pollQueueStatus: st.pollQueueStatus,
+    payCurrentOrder: st.payCurrentOrder,
+    orderBusy: st.orderBusy,
   }));
 
   // Live tracking: poll the backend queue status while this screen is open (real orders only —
@@ -81,6 +83,7 @@ export default function Queue() {
         ? queueStatus.payWindowExpiresAtMs - Date.now()
         : null;
     const ahead = queueStatus.aheadCount;
+    const myToken = queueStatus.queueToken ?? queueStatus.orderNumber;
     return {
       qTime:
         remainMs !== null
@@ -89,19 +92,31 @@ export default function Queue() {
             String(Math.floor((remainMs % 60000) / 1000)).padStart(2, '0')
           : '—',
       servingLabel: queueStatus.nowServingOrderNumber ?? '—',
-      yourTokenLabel: queueStatus.orderNumber,
+      yourTokenLabel: myToken,
+      // The line's members (their tokens, in order) — shown under the ahead row so the
+      // customer sees who has joined; their own token is marked.
+      membersLabel:
+        queueStatus.queueTokens.length > 1
+          ? 'In line: ' +
+            queueStatus.queueTokens
+              .map((t) => (t === myToken ? t + ' (you)' : t))
+              .join(' · ')
+          : '',
+      payNow: queueStatus.zone === 'payment' && queueStatus.status === 'created',
       aheadLabel:
-        queueStatus.zone === 'collection'
-          ? 'Your food is ready — collect at the counter'
-          : queueStatus.zone === 'payment'
-            ? payMsLeft !== null && payMsLeft > 0
-              ? `Pay within ${Math.max(1, Math.round(payMsLeft / 60000))} min to keep your spot`
-              : 'Waiting for payment'
-            : ahead === null
-              ? 'Being prepared for you'
-              : ahead === 0
-                ? "You're up next"
-                : `${ahead} ahead of you`,
+        queueStatus.paymentsPaused && queueStatus.zone !== 'collection'
+          ? "Counter's full — your pay window opens when it clears"
+          : queueStatus.zone === 'collection'
+            ? 'Your food is ready — collect at the counter'
+            : queueStatus.zone === 'payment'
+              ? payMsLeft !== null && payMsLeft > 0
+                ? `Pay within ${Math.max(1, Math.round(payMsLeft / 60000))} min — tap to pay`
+                : 'Your turn — tap to pay'
+              : ahead === null
+                ? 'Being prepared for you'
+                : ahead === 0
+                  ? "You're up next"
+                  : `${ahead} ahead of you`,
       // Stage-reached flags for the zone timeline. Payment counts as reached once the order is
       // paid (a paid order goes BACK to waiting for the kitchen, but never un-pays).
       paymentReached:
@@ -173,14 +188,22 @@ export default function Queue() {
               <div style={s("font:700 19px var(--display,'Space Grotesk');color:var(--a,#9BAA5C);margin-top:2px;line-height:1")}>{real ? real.yourTokenLabel : yourTokenLabel}</div>
             </div>
           </div>
-          <div style={s('margin-top:13px;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px;position:relative')}>
+          <div
+            onClick={real?.payNow && !orderBusy ? () => void payCurrentOrder() : undefined}
+            style={s('margin-top:13px;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px;position:relative' + (real?.payNow ? ';cursor:pointer' : ''))}
+          >
             <Icon size={16} stroke="var(--alite,#C2D89B)" w={2.2} round d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87" />
-            <span style={s("font:600 12px 'Inter';color:rgba(255,255,255,.9)")}>{real ? real.aheadLabel : aheadLabel}</span>
+            <span style={s("font:600 12px 'Inter';color:rgba(255,255,255,.9)")}>{real ? (orderBusy && real.payNow ? 'Opening payment…' : real.aheadLabel) : aheadLabel}</span>
             <span style={s('margin-left:auto;display:flex;align-items:center;gap:5px')}>
               <span style={s('width:5px;height:5px;border-radius:50%;background:var(--alite,#C2D89B);animation:rasaPulse 1.1s infinite')} />
               <span style={s("font:700 8.5px 'JetBrains Mono',monospace;color:var(--alite,#C2D89B);text-transform:uppercase;letter-spacing:.6px")}>Live</span>
             </span>
           </div>
+          {real && real.membersLabel && (
+            <div style={s("margin-top:9px;font:600 10px 'JetBrains Mono',monospace;letter-spacing:.4px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative")}>
+              {real.membersLabel}
+            </div>
+          )}
         </div>
 
         <div style={s('display:grid;grid-template-columns:1.15fr .85fr;gap:11px;margin-top:14px')}>
