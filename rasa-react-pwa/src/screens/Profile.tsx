@@ -7,11 +7,11 @@ interface GridItem { label: string; sub?: string; icon: string; go?: Screen; sub
 
 const backPath = 'm15 18-6-6 6-6';
 const bellPath = 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0';
-const cameraPath = 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z';
 const chevRPath = 'm9 18 6-6-6-6';
 
+// "Active Orders" sub is computed live in the component (one queue place per customer → 0 or 1).
 const orders: GridItem[] = [
-  { label: 'Active Orders', sub: '2 Orders', icon: 'M5.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM18.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM15 17.5H9m6-11h2l2.5 7M5.5 17.5 9 6.5h4', go: 'queue' },
+  { label: 'Active Orders', icon: 'M5.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM18.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM15 17.5H9m6-11h2l2.5 7M5.5 17.5 9 6.5h4', go: 'queue' },
   { label: 'Order History', sub: 'View all', icon: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4ZM3 6h18M16 10a4 4 0 0 1-8 0', go: 'orders' },
   { label: 'Reorder', sub: 'Buy again', icon: 'M3 2v6h6M21 22v-6h-6M3.5 13a9 9 0 0 0 15 5.7L21 16M21 11a9 9 0 0 0-15-5.7L3 8', go: 'orders' },
 ];
@@ -102,9 +102,29 @@ function Grid3({ items, onClick }: { items: GridItem[]; onClick: (s: Screen) => 
   );
 }
 
-export default function Profile() {
-  const { go, language } = useStore((st) => ({ go: st.go, language: st.language }));
+/** "+919876543210" → "+91 98765 43210" (falls back to the raw string for non-Indian formats). */
+function formatPhone(phone: string): string {
+  const m = phone.match(/^\+91(\d{5})(\d{5})$/);
+  return m ? `+91 ${m[1]} ${m[2]}` : phone;
+}
 
+export default function Profile() {
+  const { go, language, me, orderId, queueStatus, doLogout } = useStore((st) => ({
+    go: st.go,
+    language: st.language,
+    me: st.me,
+    orderId: st.orderId,
+    queueStatus: st.queueStatus,
+    doLogout: st.doLogout,
+  }));
+
+  // The real account: phone from GET /auth/me (null while loading / signed out → placeholders).
+  const phone = me ? formatPhone(me.phone) : '—';
+  const avatarDigits = me ? me.phone.slice(-2) : '··';
+  // One queue place per customer → the active count is 0 or 1, derived from the live order.
+  const zone = queueStatus?.zone;
+  const hasActive = Boolean(orderId) && zone !== 'done' && zone !== 'cancelled';
+  const activeSub = hasActive ? `1 active${queueStatus?.queueToken ? ` · ${queueStatus.queueToken}` : ''}` : 'None right now';
 
 
   return (
@@ -121,32 +141,28 @@ export default function Profile() {
 
       <div style={s('margin:16px 18px 0;background:#E9F0FB;border:1px solid #D8E4F5;border-radius:22px;padding:16px')}>
         <button onClick={() => go('editaddress')} style={s('width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:0;cursor:pointer;text-align:left')}>
-          <div style={s('position:relative;flex-shrink:0')}>
-            <div style={s('width:64px;height:64px;border-radius:50%;background:#DCE6F5 center/cover no-repeat;background-image:url(https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200);border:2.5px solid #fff;box-shadow:0 4px 12px -5px rgba(60,40,20,.4)')} />
-            <div style={s('position:absolute;right:-2px;bottom:-2px;width:24px;height:24px;border-radius:50%;background:var(--p,#7D1535);border:2.5px solid #E9F0FB;display:flex;align-items:center;justify-content:center')}>
-              <Icon size={11} stroke="#fff" w={2.4} d={cameraPath} />
-            </div>
+          <div style={s('width:64px;height:64px;border-radius:50%;background:var(--p,#7D1535);border:2.5px solid #fff;box-shadow:0 4px 12px -5px rgba(60,40,20,.4);display:flex;align-items:center;justify-content:center;flex-shrink:0')}>
+            <span style={s("font:700 20px var(--display,'Space Grotesk');color:#fff;letter-spacing:1px")}>{avatarDigits}</span>
           </div>
           <div style={s('flex:1;min-width:0')}>
-            <div style={s("font:700 18px var(--display,'Space Grotesk');color:#2A1B22;letter-spacing:-.3px")}>Ananya Sharma</div>
-            <div style={s("font:500 12px 'Inter';color:#6F6A7D;margin-top:4px")}>+91 98765 43210</div>
-            <div style={s("font:500 12px 'Inter';color:#6F6A7D;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>ananya.sharma@example.com</div>
+            <div style={s("font:700 18px var(--display,'Space Grotesk');color:#2A1B22;letter-spacing:-.3px")}>{phone}</div>
+            <div style={s("font:500 12px 'Inter';color:#6F6A7D;margin-top:4px")}>Rasa member · signed in</div>
           </div>
           <Icon size={18} stroke="#8FA6C9" w={2.4} d={chevRPath} />
         </button>
-        <div style={s('margin-top:15px')}>
-          <div style={s('display:flex;align-items:center;justify-content:space-between;margin-bottom:6px')}>
-            <span style={s("font:500 11px 'Inter';color:#5E6B82")}>Profile Completed</span>
-            <span style={s("font:700 11px 'Inter';color:var(--p,#7D1535)")}>60%</span>
-          </div>
-          <div style={s('height:7px;border-radius:999px;background:#D2E0F2;overflow:hidden')}>
-            <div style={s('width:60%;height:100%;border-radius:999px;background:var(--p,#7D1535)')} />
-          </div>
-        </div>
+        {hasActive && (
+          <button onClick={() => go('queue')} style={s('width:100%;margin-top:13px;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #D8E4F5;border-radius:12px;padding:10px 12px;cursor:pointer;text-align:left')}>
+            <span style={s('width:8px;height:8px;border-radius:50%;background:#3E8E5A;flex-shrink:0')} />
+            <span style={s("flex:1;font:600 11.5px 'Inter';color:#3B2630")}>
+              You&apos;re in a queue{queueStatus?.queueToken ? ` — token ${queueStatus.queueToken}` : ''}. Tap to view.
+            </span>
+            <Icon size={14} stroke="#8FA6C9" w={2.4} d={chevRPath} />
+          </button>
+        )}
       </div>
 
       <Section title="ORDERS" bg="#FBF4E4" border="#F0E4C9">
-        <Grid4 items={orders} onClick={go} />
+        <Grid4 items={orders.map((it) => (it.label === 'Active Orders' ? { ...it, sub: activeSub } : it))} onClick={go} />
         <button onClick={() => go('orders')} style={s('width:100%;margin-top:11px;display:flex;align-items:center;gap:11px;background:#fff;border:1px solid #EFE7DC;border-radius:14px;padding:13px 14px;cursor:pointer;text-align:left')}>
           <Icon size={19} stroke="#B07A2B" w={2} round d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4ZM3 6h18M16 10a4 4 0 0 1-8 0" />
           <span style={s("flex:1;font:700 12.5px 'Inter';color:#3B2630")}>Track all your orders in one place</span>
@@ -204,7 +220,7 @@ export default function Profile() {
       </Section>
 
       <div style={s('margin:14px 18px 8px;background:#FBEBEB;border:1px solid #F3D7D7;border-radius:22px;padding:6px')}>
-        <button onClick={() => go('login')} style={s('width:100%;display:flex;align-items:center;gap:13px;background:none;border:none;padding:14px;cursor:pointer;text-align:left')}>
+        <button onClick={doLogout} style={s('width:100%;display:flex;align-items:center;gap:13px;background:none;border:none;padding:14px;cursor:pointer;text-align:left')}>
           <div style={s('width:40px;height:40px;border-radius:11px;background:#F7DADA;display:flex;align-items:center;justify-content:center;flex-shrink:0')}>
             <Icon size={19} stroke="#C0392B" w={2.2} round d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
           </div>

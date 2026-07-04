@@ -226,6 +226,14 @@ export async function googleLogin(credential) {
   return data;
 }
 
+/**
+ * GET /auth/me → { id, phone } for the logged-in customer (requires Bearer).
+ * The profile screen uses this so a long-running session shows the real account.
+ */
+export async function getMe() {
+  return request('/auth/me');
+}
+
 export async function logout() {
   const refreshToken = localStorage.getItem(REFRESH_KEY);
   try {

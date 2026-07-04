@@ -24,6 +24,8 @@ export function register(input: { phone: string; password: string }): Promise<un
 export function verifyOtp(input: { phone: string; otp: string }): Promise<{ token: string }>;
 export function resendOtp(input: { phone: string }): Promise<unknown>;
 export function logout(): Promise<void>;
+/** The logged-in customer's account (GET /auth/me). */
+export function getMe(): Promise<{ id: string; phone: string }>;
 
 export interface BackendVendor {
   id: string;
