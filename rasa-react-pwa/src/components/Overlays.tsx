@@ -8,9 +8,12 @@ const coinPath = 'M12 8v8M9.5 10.5h3.5a1.5 1.5 0 0 1 0 3H9.5';
 
 
 function QueueSheet() {
-  const { closeQueueSheet, confirmJoinQueue } = useStore((st) => ({
+  const { closeQueueSheet, confirmJoinQueue, joinNotice, joinBusy, joinFarAck } = useStore((st) => ({
     closeQueueSheet: st.closeQueueSheet,
     confirmJoinQueue: st.confirmJoinQueue,
+    joinNotice: st.joinNotice,
+    joinBusy: st.joinBusy,
+    joinFarAck: st.joinFarAck,
   }));
 
   return (
@@ -22,6 +25,11 @@ function QueueSheet() {
         </div>
         <div style={s("font:700 18px var(--display,'Space Grotesk');color:#2A1B22;margin-bottom:7px")}>Join the queue?</div>
         <div style={s("font:500 13px 'Inter';color:#6F6A7D;line-height:1.5;max-width:250px;margin-bottom:24px")}>You'll get a live token and a heads-up when it's almost your turn.</div>
+        {joinNotice && (
+          <div style={s("font:600 12px 'Inter';color:" + (joinFarAck ? '#B07A2B' : '#C0392B') + ";line-height:1.5;max-width:270px;margin:-10px 0 16px")}>
+            {joinNotice}
+          </div>
+        )}
         <div style={s('display:flex;gap:10px;width:100%')}>
           <button
             onClick={closeQueueSheet}
@@ -30,10 +38,11 @@ function QueueSheet() {
             No
           </button>
           <button
-            onClick={confirmJoinQueue}
+            onClick={() => void confirmJoinQueue()}
+            disabled={joinBusy}
             style={s('flex:2;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radM,14px);padding:15px 0;font:700 13.5px var(--display,"Space Grotesk");letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px')}
           >
-            Confirm &amp; join <span>→</span>
+            {joinBusy ? 'Joining…' : joinFarAck ? 'Join anyway' : 'Confirm & join'} <span>→</span>
           </button>
         </div>
       </div>
