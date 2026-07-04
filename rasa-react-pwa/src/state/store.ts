@@ -145,6 +145,11 @@ export interface AppState {
   location: string;
   // join-queue sheet
   queueSheet: boolean;
+  // Join gate: notice shown in the sheet (location required / far guidance / error), busy flag
+  // while joining, and whether the far warning has been acknowledged ("Join anyway").
+  joinNotice: string | null;
+  joinBusy: boolean;
+  joinFarAck: boolean;
   // auth
   otp: string[];
   // ── live backend session + data ──
@@ -211,7 +216,7 @@ export interface AppActions {
   // join queue
   openQueueSheet: () => void;
   closeQueueSheet: () => void;
-  confirmJoinQueue: () => void;
+  confirmJoinQueue: () => Promise<void>;
   // bill flow
   payBillStart: () => void;
   billKey: (k: string) => void;
@@ -306,6 +311,9 @@ const initialState: AppState = {
   language: 'English',
   location: 'Indiranagar, BLR',
   queueSheet: false,
+  joinNotice: null,
+  joinBusy: false,
+  joinFarAck: false,
   otp: ['', '', '', '', '', ''], // backend OTP is 6 digits
   // Live session: start at the sign-in gate unless a token is already stored.
   authed: api.isAuthenticated(),
@@ -640,9 +648,84 @@ export const useStore = create<Store>((set, get) => ({
   },
 
 
-  openQueueSheet: () => set({ queueSheet: true }),
-  closeQueueSheet: () => set({ queueSheet: false }),
-  confirmJoinQueue: () => set({ queueSheet: false, screen: 'queue' }),
+  openQueueSheet: () => set({ queueSheet: true, joinNotice: null, joinFarAck: false }),
+  closeQueueSheet: () => set({ queueSheet: false, joinNotice: null, joinFarAck: false }),
+  // The REAL join (live vendors): location is REQUIRED — no location, no join. With location on,
+  // the 5 km radius is checked at tap time; beyond it the agreed guidance shows and the customer
+  // must explicitly tap again ("Join anyway") — they can still order, but travel tracking is off
+  // and they should watch their queue number. Joining creates the backend order UNPAID
+  // (join-first): the queue token is the place in line; payment happens at the front.
+  confirmJoinQueue: async () => {
+    const { vendorId, cart, joinBusy, joinFarAck } = get();
+    if (joinBusy) return;
+    // Mock demo vendors keep the original showcase behavior.
+    if (!UUID_RE.test(vendorId)) {
+      set({ queueSheet: false, screen: 'queue' });
+      return;
+    }
+    if (!api.isAuthenticated()) {
+      set({ queueSheet: false, screen: 'login', authError: 'Please sign in to join the queue.' });
+      return;
+    }
+    if (get().orderId) {
+      // Already in the queue for this order — just show it.
+      set({ queueSheet: false, screen: 'queue', joinNotice: null, joinFarAck: false });
+      return;
+    }
+    const menu = get().liveVendorById[vendorId]?.items;
+    const validIds = menu ? new Set(menu.map((m) => m.id)) : null;
+    const items = Object.entries(cart)
+      .filter(([menuItemId]) => UUID_RE.test(menuItemId) && (!validIds || validIds.has(menuItemId)))
+      .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
+    if (items.length === 0) {
+      set({ joinNotice: 'Add items from the menu first — your order is your place in the queue.' });
+      return;
+    }
+    set({ joinBusy: true });
+    try {
+      // HARD gate: no location, no join.
+      const geo = await api.requestGeoLocation();
+      if (!geo) {
+        set({
+          joinBusy: false,
+          joinFarAck: false,
+          joinNotice: 'Turn on location to join the queue — we need it to check your distance to the stall.',
+        });
+        return;
+      }
+      const vendorGeo = get().liveVendorById[vendorId]?.geo ?? null;
+      const far = vendorGeo ? isFarFromVendor(geo, vendorGeo) : false;
+      if (far && !joinFarAck) {
+        // The agreed far message: they may still join, but must acknowledge it first.
+        set({
+          joinBusy: false,
+          joinFarAck: true,
+          joinNotice:
+            "You're more than 5 km from the stall — live travel tracking is off. Watch your queue number and reach 5–10 min before your turn.",
+        });
+        return;
+      }
+      const order = await api.createOrder({
+        vendorId,
+        items,
+        idempotencyKey: newIdemKey(),
+        customerLocation: geo,
+      });
+      set({
+        orderId: order.id,
+        customerGeo: geo,
+        farFromVendor: vendorGeo ? far : null,
+        joinBusy: false,
+        joinNotice: null,
+        joinFarAck: false,
+        queueSheet: false,
+        screen: 'queue',
+        orderError: '',
+      });
+    } catch (e) {
+      set({ joinBusy: false, joinNotice: (e as Error).message || 'Could not join the queue.' });
+    }
+  },
 
   payBillStart: () => set({ screen: 'billamount', billAmt: 0, billOffer: null, billOrderId: null, rasaInfoOpen: false, couponOpen: false }),
   billKey: (k) =>
