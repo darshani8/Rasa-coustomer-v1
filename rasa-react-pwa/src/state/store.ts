@@ -14,7 +14,6 @@ import {
   type OfferFilter,
   type Vendor,
 } from '@/data';
-import { billPayable } from '@/lib/money';
 import type { BillOfferId } from '@/lib/money';
 import * as api from '@/api';
 import type { BackendMenuItem, BackendVendor } from '@/api';
@@ -113,8 +112,8 @@ export type Screen =
   | 'support' | 'supporttopic' | 'chat' | 'ticket'
   | 'editaddress' | 'notifs' | 'language' | 'location'
   | 'login' | 'signup' | 'otp'
-  | 'booking' | 'pay' | 'success' | 'failed' | 'queue'
-  | 'billamount' | 'billoffers' | 'billsummary' | 'paymethod' | 'alloffers' | 'billsuccess'
+  | 'booking' | 'success' | 'failed' | 'queue'
+  | 'billamount' | 'billoffers' | 'billsummary' | 'alloffers' | 'billsuccess'
   | 'profile' | 'orders' | 'offers';
 
 export type VendorTab = 'Menu' | 'Offers' | 'Reviews' | 'About';
@@ -130,14 +129,11 @@ export interface AppState {
   tab: VendorTab;
   // cart
   cart: Record<string, number>;
-  // order-flow payment
-  payMethod: string;
   // live queue countdown (seconds)
   qSec: number;
   // pay-at-restaurant bill flow
   billAmt: number;
   billOffer: BillOfferId | null;
-  billPay: string;
   rasaInfoOpen: boolean;
   couponOpen: boolean;
   billCoupon: string | null;
@@ -271,7 +267,6 @@ export interface AppActions {
   billKey: (k: string) => void;
   billProceed: () => void;
   applyBillOffer: (id: BillOfferId) => void;
-  selectBillPay: (id: string) => void;
   confirmBillPay: () => Promise<void>;
   setBillCouponInput: (v: string) => void;
   applyBillCoupon: () => void;
@@ -279,8 +274,6 @@ export interface AppActions {
   closeRasaInfo: () => void;
   openCoupon: () => void;
   closeCoupon: () => void;
-  // order payment
-  setPayMethod: (id: string) => void;
   // discover
   setFoodCat: (name: string) => void;
   setCatSort: (k: CatSort) => void;
@@ -325,11 +318,9 @@ const initialState: AppState = {
   vendorId: 'artiste',
   tab: 'Menu',
   cart: {},
-  payMethod: 'visa',
   qSec: 765,
   billAmt: 0,
   billOffer: null,
-  billPay: 'gpay',
   rasaInfoOpen: false,
   couponOpen: false,
   billCoupon: null,
@@ -944,7 +935,15 @@ export const useStore = create<Store>((set, get) => ({
     }
   },
 
-  payBillStart: () => set({ screen: 'billamount', billAmt: 0, billOffer: null, billOrderId: null, rasaInfoOpen: false, couponOpen: false }),
+  // Re-entering Pay bill with an UNFINISHED attempt jumps straight to the confirm screen — the
+  // amount survives a dismissed/failed checkout instead of forcing the numpad again. A finished
+  // payment clears it (see confirmBillPay), so the next bill starts fresh.
+  payBillStart: () =>
+    set((st) => ({
+      screen: st.billAmt > 0 ? 'billsummary' : 'billamount',
+      rasaInfoOpen: false,
+      couponOpen: false,
+    })),
   billKey: (k) =>
     set((s) => {
       let a = s.billAmt;
@@ -956,23 +955,26 @@ export const useStore = create<Store>((set, get) => ({
       return { billAmt: a, billOrderId: null };
     }),
   billProceed: () => {
-    if (get().billAmt > 0) set({ screen: 'billoffers' });
+    if (get().billAmt > 0) set({ screen: 'billsummary' });
   },
   applyBillOffer: (id) =>
-    set((s) => ({ billOffer: s.billOffer === id ? null : id, billOrderId: null })),
-  selectBillPay: (id) => set({ billPay: id, screen: 'billsummary' }),
+    set((s) => ({ billOffer: s.billOffer === id ? null : id, billCoupon: null, billOrderId: null })),
   // Pay the counter bill for real: create a kind='bill' order for the exact payable the summary
   // shows (rupees → integer paise) and run the standard Razorpay flow. Mock vendors (no UUID)
   // keep the demo behavior. UI is untouched — success still lands on the billsuccess screen.
   confirmBillPay: async () => {
-    const { vendorId, billAmt, billOffer, authed, orderBusy } = get();
+    const { vendorId, billAmt, billOffer, billCoupon, authed, orderBusy } = get();
     if (orderBusy) return; // a tap is already in flight — never start a second bill order
-    const payableRupees = billPayable(billAmt, billOffer);
     const isLiveVendor = UUID_RE.test(vendorId);
-    if (!authed || !isLiveVendor || payableRupees <= 0) {
+    if (!authed || !isLiveVendor || billAmt <= 0) {
       set({ screen: 'billsuccess', rasaInfoOpen: false, couponOpen: false });
       return;
     }
+    // The GROSS amount + coupon code go to the server; the DISCOUNT is computed there (the
+    // gateway charges the server's payable — a tampered client cannot pay less). The on-screen
+    // maths is only a preview of the same rules.
+    const couponCode =
+      billCoupon ?? (billOffer === 'welcome250' ? 'WELCOME250' : billOffer === 'rbl25' ? 'RBL25' : undefined);
     // Busy stays true until Checkout opens (or fails): the button is disabled for the whole
     // create-order + gateway-poll window, so a double-tap cannot double-charge.
     set({ orderBusy: true, orderError: '' });
@@ -981,8 +983,9 @@ export const useStore = create<Store>((set, get) => ({
       if (!id) {
         const order = await api.createBillOrder({
           vendorId,
-          amountPaise: String(Math.round(payableRupees * 100)),
+          amountPaise: String(Math.round(billAmt * 100)),
           idempotencyKey: newIdemKey(),
+          ...(couponCode ? { couponCode } : {}),
         });
         id = order.id;
         set({ billOrderId: id });
@@ -990,8 +993,10 @@ export const useStore = create<Store>((set, get) => ({
       await payForOrder({
         orderId: id,
         description: 'Rasa bill payment',
+        // Paid → this attempt is DONE: clear the whole bill context so the next Pay bill starts
+        // at a fresh numpad instead of resurrecting an old amount.
         onConfirmed: () =>
-          set({ billOrderId: null, screen: 'billsuccess', rasaInfoOpen: false, couponOpen: false }),
+          set({ billOrderId: null, billAmt: 0, billOffer: null, billCoupon: null, screen: 'billsuccess', rasaInfoOpen: false, couponOpen: false }),
         onUnavailable: () =>
           set({ orderError: 'Online payment is not configured on the server — pay at the counter.' }),
         onError: (m) => set({ orderError: m }),
@@ -1004,16 +1009,24 @@ export const useStore = create<Store>((set, get) => ({
     }
   },
   setBillCouponInput: (v) => set({ billCouponInput: v }),
+  // Known codes flip the matching offer so the preview shows the same discount the server will
+  // apply; unknown codes still go to the server, which rejects them with a clear 400 message.
   applyBillCoupon: () => {
-    const c = get().billCouponInput.trim();
-    if (c) set({ billCoupon: c.toUpperCase(), couponOpen: false, billCouponInput: '' });
+    const c = get().billCouponInput.trim().toUpperCase();
+    if (!c) return;
+    const offer = c === 'WELCOME250' ? 'welcome250' : c === 'RBL25' ? 'rbl25' : null;
+    set({
+      billCoupon: c,
+      ...(offer ? { billOffer: offer as BillOfferId } : {}),
+      billOrderId: null,
+      couponOpen: false,
+      billCouponInput: '',
+    });
   },
   openRasaInfo: () => set({ rasaInfoOpen: true }),
   closeRasaInfo: () => set({ rasaInfoOpen: false }),
   openCoupon: () => set({ couponOpen: true }),
   closeCoupon: () => set({ couponOpen: false }),
-
-  setPayMethod: (id) => set({ payMethod: id }),
 
   setFoodCat: (name) => set({ foodCat: name }),
   setCatSort: (k) => set({ catSort: k }),

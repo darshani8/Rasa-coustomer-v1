@@ -197,12 +197,14 @@ export async function login({ phone, password }) {
  * POST /orders/bill — settle a counter bill of `amountPaise` (integer paise string) with the
  * vendor through the normal payment pipeline. Same Order shape back (kind='bill').
  */
-export async function createBillOrder({ vendorId, amountPaise, idempotencyKey }) {
+export async function createBillOrder({ vendorId, amountPaise, idempotencyKey, couponCode }) {
   if (!idempotencyKey) throw new Error('createBillOrder requires an idempotencyKey');
   return request('/orders/bill', {
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify({ vendorId, amountPaise }),
+    // amountPaise is the GROSS bill; the server computes any coupon discount and charges the
+    // payable (the response carries billGrossPaise/billDiscountPaise/billCouponCode).
+    body: JSON.stringify({ vendorId, amountPaise, ...(couponCode ? { couponCode } : {}) }),
   });
 }
 

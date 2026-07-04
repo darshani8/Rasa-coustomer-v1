@@ -20,7 +20,7 @@ export default function Failed() {
     <div style={s('animation:rasaFade .35s ease;padding:0 0 0;display:flex;flex-direction:column;min-height:100%')}>
       <div style={s('display:flex;align-items:center;gap:12px;padding:14px 18px 4px')}>
         <button
-          onClick={() => go('pay')}
+          onClick={() => go('booking')}
           style={s('width:36px;height:36px;border-radius:12px;background:#fff;border:1px solid #ECE6DB;display:flex;align-items:center;justify-content:center;cursor:pointer')}
         >
           <Icon size={18} stroke="#3B2630" w={2.4} d={backPath} />
@@ -63,13 +63,13 @@ export default function Failed() {
       </div>
       <div style={s('position:sticky;bottom:0;left:0;right:0;z-index:45;margin-top:auto;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px')}>
         <button
-          onClick={() => go('pay')}
+          onClick={() => go('booking')}
           style={s('width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13px var(--display,"Space Grotesk");letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px')}
         >
           <Icon size={16} stroke="#fff" w={2.4} round d={retryPath} /> Retry Payment
         </button>
         <button
-          onClick={() => go('pay')}
+          onClick={() => go('booking')}
           style={s('width:100%;background:var(--pchip,#F1DEE3);color:var(--p,#7D1535);border:none;border-radius:var(--radL,16px);padding:16px;font:700 12.5px var(--display,"Space Grotesk");letter-spacing:.8px;text-transform:uppercase;cursor:pointer;margin-top:10px')}
         >
           Change Payment Method

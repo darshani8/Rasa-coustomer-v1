@@ -105,10 +105,12 @@ export function leaveQueue(orderId: string): Promise<{ status: string; message: 
 export function requestGeoLocation(): Promise<{ lat: number; lng: number } | null>;
 
 export function createBillOrder(input: {
+  /** GROSS bill in integer paise; the server computes the coupon discount and charges the payable. */
   vendorId: string;
   amountPaise: string;
   idempotencyKey: string;
-}): Promise<BackendOrder>;
+  couponCode?: string;
+}): Promise<BackendOrder & { billGrossPaise: string; billDiscountPaise: string; billCouponCode: string | null }>;
 
 export function getGoogleConfig(): Promise<{ clientId: string | null }>;
 export function googleLogin(credential: string): Promise<{ token: string }>;

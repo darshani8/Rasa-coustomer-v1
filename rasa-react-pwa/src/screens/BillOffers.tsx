@@ -1,5 +1,5 @@
 import { useStore } from '@/state/store';
-import { getVendor, billMethodName } from '@/data';
+import { getVendor } from '@/data';
 import { billDiscount, billPayable, inr } from '@/lib/money';
 import { s } from '@/lib/style';
 import { StickyHeader, Icon } from '@/components';
@@ -17,7 +17,6 @@ export default function BillOffers() {
     vendorId,
     billAmt,
     billOffer,
-    billPay,
     applyBillOffer,
     openRasaInfo,
     goBillSummary,
@@ -28,7 +27,6 @@ export default function BillOffers() {
     vendorId: st.vendorId,
     billAmt: st.billAmt,
     billOffer: st.billOffer,
-    billPay: st.billPay,
     applyBillOffer: st.applyBillOffer,
     openRasaInfo: st.openRasaInfo,
     goBillSummary: () => st.go('billsummary'),
@@ -39,7 +37,6 @@ export default function BillOffers() {
   const vendor = liveVendor ?? getVendor(vendorId);
   const discount = billDiscount(billOffer, billAmt);
   const payable = billPayable(billAmt, billOffer);
-  const payLabel = billMethodName(billPay);
   const offerPending = billOffer === null;
 
   const scanBtn = (
@@ -139,7 +136,7 @@ export default function BillOffers() {
       <div style={s('position:sticky;bottom:0;margin-top:auto;background:rgba(250,246,243,.97);backdrop-filter:blur(10px);border-top:1px solid #E6DFD4;padding:12px 16px;display:flex;align-items:center;gap:12px')}>
         <div style={s('flex-shrink:0')}>
           <div style={s("font:600 9px 'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase;color:#A39BB0")}>Pay using</div>
-          <div style={s("font:700 12px 'Inter';color:#3B2630;margin-top:2px")}>{payLabel}</div>
+          <div style={s("font:700 12px 'Inter';color:#3B2630;margin-top:2px")}>UPI · Cards</div>
         </div>
         <div style={s('flex:1;text-align:right')}>
           <div style={s("font:600 9px 'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase;color:#A39BB0")}>Total</div>

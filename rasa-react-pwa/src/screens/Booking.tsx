@@ -9,8 +9,12 @@ export default function Booking() {
   const vendorId = useStore((st) => st.vendorId);
   const cart = useStore((st) => st.cart);
   const go = useStore((st) => st.go);
+  const liveV = useStore((st) => st.liveVendorById[st.vendorId]);
+  const placeOrderAndPay = useStore((st) => st.placeOrderAndPay);
+  const orderBusy = useStore((st) => st.orderBusy);
+  const orderError = useStore((st) => st.orderError);
 
-  const v = getVendor(vendorId);
+  const v = liveV ?? getVendor(vendorId);
 
   // Booking summary order lines + featured items (mirror renderVals):
   // real cart items when present, otherwise a 2-1-1 sample from the first three.
@@ -138,25 +142,20 @@ export default function Booking() {
             <span>Base Rate</span>
             <span style={s("font:600 13px 'JetBrains Mono',monospace;color:#3B2630")}>{fmt(bill.subtotal)}</span>
           </div>
-          <div style={s("display:flex;justify-content:space-between;font:500 13px 'Inter';color:#6F6A7D;margin-bottom:13px")}>
-            <span>Service Fee</span>
-            <span style={s("font:600 13px 'JetBrains Mono',monospace;color:#3B2630")}>{fmt(bill.fee)}</span>
-          </div>
-          <div style={s("display:flex;justify-content:space-between;font:500 13px 'Inter';color:#2F9E6E;margin-bottom:13px")}>
-            <span>Discount (15%)</span>
-            <span style={s("font:600 13px 'JetBrains Mono',monospace")}>−{fmt(bill.discount)}</span>
-          </div>
           <div style={s('border-top:1px solid #EFE9DF;padding-top:14px;display:flex;justify-content:space-between;align-items:center')}>
             <span style={s("font:700 16px var(--display,'Space Grotesk');color:#3B2630")}>Total</span>
-            <span style={s("font:700 19px var(--display,'Space Grotesk');color:var(--p,#7D1535)")}>{fmt(bill.total)}</span>
+            <span style={s("font:700 19px var(--display,'Space Grotesk');color:var(--p,#7D1535)")}>{fmt(bill.subtotal)}</span>
           </div>
-          <div style={s("font:400 10.5px 'Inter';color:#B0A9BC;font-style:italic;margin-top:11px;line-height:1.5")}>Overall summary line by line provided here for transparency.</div>
+          <div style={s("font:400 10.5px 'Inter';color:#B0A9BC;font-style:italic;margin-top:11px;line-height:1.5")}>No hidden fees — you pay exactly the item total.</div>
         </div>
       </div>
 
       <div style={s('position:sticky;bottom:0;left:0;right:0;background:rgba(250,246,243,.96);backdrop-filter:blur(10px);border-top:1px solid #EFE9DF;padding:13px 18px;z-index:45')}>
-        <button onClick={() => go('pay')} style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px")}>
-          <Icon size={18} stroke="#fff" w={2.2} d={ICON.arrow} /> Proceed to Book
+        {orderError && (
+          <div style={s("margin-bottom:8px;font:600 11.5px 'Inter';color:#C0392B;text-align:center")}>{orderError}</div>
+        )}
+        <button disabled={orderBusy} onClick={() => void placeOrderAndPay()} style={s("width:100%;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radL,16px);padding:16px;font:700 13.5px var(--display,'Space Grotesk');letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px")}>
+          <Icon size={18} stroke="#fff" w={2.2} d={ICON.arrow} /> {orderBusy ? 'Opening payment…' : 'Pay securely'}
         </button>
       </div>
     </div>
