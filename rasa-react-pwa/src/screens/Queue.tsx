@@ -14,7 +14,7 @@ const cardPath = 'M2 5h20v14H2zM2 10h20';
 const bagPath = 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4ZM3 6h18M16 10a4 4 0 0 1-8 0';
 
 export default function Queue() {
-  const { go, vendorId, qSec, cart, add, remove, liveV, farFromVendor, schedulingPlan, orderId, queueStatus, queueStatusAt, customerGeo, pollQueueStatus, payCurrentOrder, orderBusy } = useStore((st) => ({
+  const { go, vendorId, qSec, cart, add, remove, liveV, farFromVendor, schedulingPlan, orderId, orderVendorId, queueStatus, queueStatusAt, customerGeo, pollQueueStatus, payCurrentOrder, orderBusy, openExitSheet } = useStore((st) => ({
     go: st.go,
     vendorId: st.vendorId,
     qSec: st.qSec,
@@ -31,16 +31,25 @@ export default function Queue() {
     pollQueueStatus: st.pollQueueStatus,
     payCurrentOrder: st.payCurrentOrder,
     orderBusy: st.orderBusy,
+    orderVendorId: st.orderVendorId,
+    openExitSheet: st.openExitSheet,
   }));
+
+  // The page tracks THIS vendor's queue: numbers show only when the active order belongs here.
+  const LIVE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isLiveVendor = LIVE_ID.test(vendorId);
+  const joinedHere = !!orderId && orderVendorId === vendorId;
+  // VALIDATION: a live vendor's queue shows NO numbers before joining — no token, no countdown.
+  const notJoined = isLiveVendor && !joinedHere;
 
   // Live tracking: poll the backend queue status while this screen is open (real orders only —
   // mock/demo vendors keep the simulated numbers below).
   useEffect(() => {
-    if (!orderId) return;
+    if (!orderId || !joinedHere) return;
     void pollQueueStatus();
     const timer = setInterval(() => void pollQueueStatus(), 5000);
     return () => clearInterval(timer);
-  }, [orderId, pollQueueStatus]);
+  }, [orderId, joinedHere, pollQueueStatus]);
 
   // Live vendors (real backend menu) are not in the mock catalogue — resolve them first, same
   // as Vendor.tsx, or the tracker shows a fallback vendor's items instead of the real order.
@@ -162,6 +171,14 @@ export default function Queue() {
           <Icon size={18} stroke="#3B2630" w={2.4} d={backPath} />
         </button>
         <span style={s("font:700 16px var(--display,'Space Grotesk');color:#3B2630")}>Live queue</span>
+        {joinedHere && queueStatus?.status === 'created' && (
+          <button
+            onClick={openExitSheet}
+            style={s("margin-left:auto;background:none;border:1.5px solid #EAC9D1;color:#C0392B;border-radius:10px;padding:7px 13px;font:700 11.5px var(--display,'Space Grotesk');letter-spacing:.3px;cursor:pointer")}
+          >
+            Exit queue
+          </button>
+        )}
       </div>
 
       <div style={s('padding:18px 22px 0;flex:1')}>
@@ -181,11 +198,11 @@ export default function Queue() {
                 <span style={s('width:6px;height:6px;border-radius:50%;background:var(--alite,#C2D89B);animation:rasaPulse 1.1s infinite')} />
                 <span style={s("font:600 8px 'JetBrains Mono',monospace;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.6px")}>Now serving at counter</span>
               </div>
-              <div style={s("font:700 32px var(--display,'Space Grotesk');color:#fff;margin-top:6px;line-height:1;letter-spacing:.5px")}>{real ? real.servingLabel : servingLabel}</div>
+              <div style={s("font:700 32px var(--display,'Space Grotesk');color:#fff;margin-top:6px;line-height:1;letter-spacing:.5px")}>{notJoined ? '—' : real ? real.servingLabel : servingLabel}</div>
             </div>
             <div style={s('text-align:right;background:rgba(155,170,92,.18);border:1px solid rgba(155,170,92,.4);border-radius:12px;padding:7px 11px')}>
               <div style={s("font:600 8px 'JetBrains Mono',monospace;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.6px")}>Your token</div>
-              <div style={s("font:700 19px var(--display,'Space Grotesk');color:var(--a,#9BAA5C);margin-top:2px;line-height:1")}>{real ? real.yourTokenLabel : yourTokenLabel}</div>
+              <div style={s("font:700 19px var(--display,'Space Grotesk');color:var(--a,#9BAA5C);margin-top:2px;line-height:1")}>{notJoined ? '—' : real ? real.yourTokenLabel : yourTokenLabel}</div>
             </div>
           </div>
           <div
@@ -193,7 +210,7 @@ export default function Queue() {
             style={s('margin-top:13px;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px;position:relative' + (real?.payNow ? ';cursor:pointer' : ''))}
           >
             <Icon size={16} stroke="var(--alite,#C2D89B)" w={2.2} round d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87" />
-            <span style={s("font:600 12px 'Inter';color:rgba(255,255,255,.9)")}>{real ? (orderBusy && real.payNow ? 'Opening payment…' : real.aheadLabel) : aheadLabel}</span>
+            <span style={s("font:600 12px 'Inter';color:rgba(255,255,255,.9)")}>{notJoined ? 'Not in the queue yet — add items and tap Join queue' : real ? (orderBusy && real.payNow ? 'Opening payment…' : real.aheadLabel) : aheadLabel}</span>
             <span style={s('margin-left:auto;display:flex;align-items:center;gap:5px')}>
               <span style={s('width:5px;height:5px;border-radius:50%;background:var(--alite,#C2D89B);animation:rasaPulse 1.1s infinite')} />
               <span style={s("font:700 8.5px 'JetBrains Mono',monospace;color:var(--alite,#C2D89B);text-transform:uppercase;letter-spacing:.6px")}>Live</span>
@@ -214,7 +231,7 @@ export default function Queue() {
                 <Icon size={16} stroke="var(--p,#7D1535)" w={2.2} d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2" css="animation:rasaSpin 8s linear infinite" />
               </div>
             </div>
-            <div style={s("font:700 38px var(--display,'Space Grotesk');color:#3B2630;margin-top:18px;line-height:1;letter-spacing:1px")}>{real ? real.qTime : qTime}</div>
+            <div style={s("font:700 38px var(--display,'Space Grotesk');color:#3B2630;margin-top:18px;line-height:1;letter-spacing:1px")}>{notJoined ? '—' : real ? real.qTime : qTime}</div>
             <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:6px")}>minutes remaining</div>
           </div>
           {farFromVendor === true && !live ? (
@@ -251,9 +268,9 @@ export default function Queue() {
         <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:20px 18px;margin-top:14px;position:relative')}>
           <div style={s('position:absolute;left:36px;top:30px;bottom:30px;width:2px;background:#EFE9DF')} />
           {[
-            { label: 'Waiting Zone', done: true, icon: clockPath },
-            { label: 'Payment Zone', done: real ? real.paymentReached : false, icon: cardPath },
-            { label: 'Collection Zone', done: real ? real.collectionReached : false, icon: bagPath },
+            { label: 'Waiting Zone', done: !notJoined, icon: clockPath },
+            { label: 'Payment Zone', done: !notJoined && (real ? real.paymentReached : false), icon: cardPath },
+            { label: 'Collection Zone', done: !notJoined && (real ? real.collectionReached : false), icon: bagPath },
           ].map((step) => (
             <div key={step.label} style={s('display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:22px')}>
               <div style={s('display:flex;align-items:center;gap:13px')}>

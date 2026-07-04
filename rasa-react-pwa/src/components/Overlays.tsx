@@ -8,12 +8,13 @@ const coinPath = 'M12 8v8M9.5 10.5h3.5a1.5 1.5 0 0 1 0 3H9.5';
 
 
 function QueueSheet() {
-  const { closeQueueSheet, confirmJoinQueue, joinNotice, joinBusy, joinFarAck } = useStore((st) => ({
+  const { closeQueueSheet, confirmJoinQueue, joinNotice, joinBusy, joinFarAck, joinAlready } = useStore((st) => ({
     closeQueueSheet: st.closeQueueSheet,
     confirmJoinQueue: st.confirmJoinQueue,
     joinNotice: st.joinNotice,
     joinBusy: st.joinBusy,
     joinFarAck: st.joinFarAck,
+    joinAlready: st.joinAlready,
   }));
 
   return (
@@ -26,7 +27,7 @@ function QueueSheet() {
         <div style={s("font:700 18px var(--display,'Space Grotesk');color:#2A1B22;margin-bottom:7px")}>Join the queue?</div>
         <div style={s("font:500 13px 'Inter';color:#6F6A7D;line-height:1.5;max-width:250px;margin-bottom:24px")}>You'll get a live token and a heads-up when it's almost your turn.</div>
         {joinNotice && (
-          <div style={s("font:600 12px 'Inter';color:" + (joinFarAck ? '#B07A2B' : '#C0392B') + ";line-height:1.5;max-width:270px;margin:-10px 0 16px")}>
+          <div style={s("font:600 12px 'Inter';color:" + (joinFarAck || joinAlready ? '#B07A2B' : '#C0392B') + ";line-height:1.5;max-width:270px;margin:-10px 0 16px")}>
             {joinNotice}
           </div>
         )}
@@ -42,7 +43,47 @@ function QueueSheet() {
             disabled={joinBusy}
             style={s('flex:2;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radM,14px);padding:15px 0;font:700 13.5px var(--display,"Space Grotesk");letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px')}
           >
-            {joinBusy ? 'Joining…' : joinFarAck ? 'Join anyway' : 'Confirm & join'} <span>→</span>
+            {joinBusy ? 'Joining…' : joinAlready ? 'View my queue' : joinFarAck ? 'Join anyway' : 'Confirm & join'} <span>→</span>
+          </button>
+        </div>
+      </div>
+    </BottomSheet>
+  );
+}
+
+function ExitQueueSheet() {
+  const { exitSheet, exitBusy, closeExitSheet, confirmExitQueue, token } = useStore((st) => ({
+    exitSheet: st.exitSheet,
+    exitBusy: st.exitBusy,
+    closeExitSheet: st.closeExitSheet,
+    confirmExitQueue: st.confirmExitQueue,
+    token: st.queueStatus?.queueToken ?? st.queueStatus?.orderNumber ?? null,
+  }));
+
+  return (
+    <BottomSheet open={exitSheet} onClose={closeExitSheet} height="auto" zSheet={80} zOverlay={78} overlayOpacity={0.5} ariaLabel="Exit the queue?">
+      <div style={s('width:40px;height:5px;border-radius:999px;background:#E4DCCF;margin:11px auto 0;flex-shrink:0')} />
+      <div style={s('display:flex;flex-direction:column;align-items:center;text-align:center;padding:18px 30px 26px')}>
+        <div style={s('width:56px;height:56px;border-radius:50%;background:#FBE7EC;display:flex;align-items:center;justify-content:center;margin-bottom:16px')}>
+          <Icon size={26} stroke="#C0392B" w={2.2} round d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+        </div>
+        <div style={s("font:700 18px var(--display,'Space Grotesk');color:#2A1B22;margin-bottom:7px")}>Exit the queue?</div>
+        <div style={s("font:500 13px 'Inter';color:#6F6A7D;line-height:1.5;max-width:260px;margin-bottom:22px")}>
+          You'll lose your place{token ? ' (token ' + token + ')' : ''} and your order will be cancelled. Nothing has been charged.
+        </div>
+        <div style={s('display:flex;gap:10px;width:100%')}>
+          <button
+            onClick={closeExitSheet}
+            style={s('flex:2;background:var(--p,#7D1535);color:#fff;border:none;border-radius:var(--radM,14px);padding:15px 0;font:700 13.5px var(--display,"Space Grotesk");letter-spacing:.3px;cursor:pointer')}
+          >
+            Stay in queue
+          </button>
+          <button
+            onClick={() => void confirmExitQueue()}
+            disabled={exitBusy}
+            style={s('flex:1;background:none;color:#C0392B;border:1.5px solid #EAC9D1;border-radius:var(--radM,14px);padding:15px 0;font:700 13px var(--display,"Space Grotesk");letter-spacing:.3px;cursor:pointer')}
+          >
+            {exitBusy ? 'Exiting…' : 'Exit'}
           </button>
         </div>
       </div>
@@ -135,6 +176,7 @@ export function Overlays() {
   return (
     <>
       <QueueSheet />
+      <ExitQueueSheet />
       <RasaInfoModal />
       <CouponModal />
     </>
