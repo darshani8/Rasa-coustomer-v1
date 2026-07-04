@@ -3,6 +3,13 @@
  * ready-made RASAP2 client without turning on allowJs. Only the surface the app uses is declared.
  */
 
+/** Thrown by every API call on a non-2xx response; carries the backend error envelope. */
+export class ApiError extends Error {
+  status: number;
+  code: string;
+  details?: Record<string, unknown>;
+}
+
 export function isAuthenticated(): boolean;
 export function getToken(): string | null;
 export function clearTokens(): void;

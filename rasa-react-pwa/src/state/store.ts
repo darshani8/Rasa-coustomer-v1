@@ -30,6 +30,37 @@ function newIdemKey(): string {
     return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
   });
 }
+// ── active-order persistence ────────────────────────────────────────────────
+// The queue place must survive a PWA reload/relaunch: zustand state is in-memory only, so the
+// active order is mirrored to localStorage and reconciled against the backend at boot. Without
+// this, reopening the app showed "Not in the queue yet" to a customer who IS queued — and let
+// them join a second time with a duplicate token.
+const ACTIVE_ORDER_KEY = 'rasa.activeOrder';
+
+function readStoredActiveOrder(): { orderId: string; vendorId: string | null } | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_ORDER_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { orderId?: unknown; vendorId?: unknown };
+    if (typeof parsed.orderId !== 'string' || !UUID_RE.test(parsed.orderId)) return null;
+    return {
+      orderId: parsed.orderId,
+      vendorId: typeof parsed.vendorId === 'string' ? parsed.vendorId : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredActiveOrder(orderId: string | null, vendorId: string | null): void {
+  try {
+    if (orderId) localStorage.setItem(ACTIVE_ORDER_KEY, JSON.stringify({ orderId, vendorId }));
+    else localStorage.removeItem(ACTIVE_ORDER_KEY);
+  } catch {
+    /* storage unavailable (private mode) — the session still works, it just won't survive reload */
+  }
+}
+
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, '');
   // A bare 10-digit Indian mobile (which may itself start "91", e.g. 9187654321) must get +91 — key
@@ -214,6 +245,8 @@ export interface AppActions {
   doResendOtp: () => Promise<void>;
   doLogout: () => void;
   bootSession: () => Promise<void>;
+  // Verify the restored queue place against the backend (clears it when finished/foreign).
+  reconcileActiveOrder: () => Promise<void>;
   loadVendors: () => Promise<void>;
   placeOrderAndPay: () => Promise<void>;
   // Poll the live queue status for the current order (no-op without a real order).
@@ -336,8 +369,9 @@ const initialState: AppState = {
   pwInput: '',
   liveVendors: null,
   liveVendorById: {},
-  orderId: null,
-  orderVendorId: null,
+  // Restore the queue place a previous session held; bootSession() verifies it server-side.
+  orderId: readStoredActiveOrder()?.orderId ?? null,
+  orderVendorId: readStoredActiveOrder()?.vendorId ?? null,
   exitSheet: false,
   exitBusy: false,
   farFromVendor: null,
@@ -369,7 +403,16 @@ export const useStore = create<Store>((set, get) => ({
       return { cart, orderError: '' };
     }),
 
-  go: (screen) => set({ screen, queueSheet: false, rasaInfoOpen: false, couponOpen: false }),
+  // "Live queue" always means YOUR queue: with an active place, snap the vendor context to it —
+  // after a reload the browsing context resets, but the queue place must stay reachable.
+  go: (screen) =>
+    set((s) => ({
+      screen,
+      ...(screen === 'queue' && s.orderId && s.orderVendorId ? { vendorId: s.orderVendorId } : {}),
+      queueSheet: false,
+      rasaInfoOpen: false,
+      couponOpen: false,
+    })),
   openVendor: (id) => {
     // A backend order is single-vendor: switching vendors empties the cart so items from a
     // previous vendor are never sent under this one. The ACTIVE order/queue place is kept —
@@ -440,6 +483,7 @@ export const useStore = create<Store>((set, get) => ({
       await api.verifyOtp({ phone: normalizePhone(get().phoneInput), otp: code });
       set({ authed: true, authBusy: false, screen: 'home', otp: ['', '', '', '', '', ''], phoneInput: '', pwInput: '' });
       void get().loadVendors();
+      void get().reconcileActiveOrder();
     } catch (e) {
       set({ authBusy: false, authError: (e as Error).message || 'Invalid or expired code.' });
     }
@@ -505,6 +549,7 @@ export const useStore = create<Store>((set, get) => ({
       await api.googleLogin(credential);
       set({ authed: true, authBusy: false, screen: 'home', phoneInput: '', pwInput: '' });
       void get().loadVendors();
+      void get().reconcileActiveOrder();
     } catch (e) {
       set({ authBusy: false, authError: (e as Error).message || 'Google sign-in failed.' });
     }
@@ -521,6 +566,7 @@ export const useStore = create<Store>((set, get) => ({
       await api.login({ phone, password: pwInput });
       set({ authed: true, authBusy: false, screen: 'home', phoneInput: '', pwInput: '' });
       void get().loadVendors();
+      void get().reconcileActiveOrder();
     } catch (e) {
       set({ authBusy: false, authError: (e as Error).message || 'Sign in failed. Check your details.' });
     }
@@ -544,6 +590,28 @@ export const useStore = create<Store>((set, get) => ({
       }
     }
     void get().loadVendors();
+    void get().reconcileActiveOrder();
+  },
+  // The restored order may be finished, cancelled, or belong to a different account that last
+  // used this device — ask the backend. 404 (foreign/gone) and done/cancelled clear it; a
+  // network hiccup keeps it (the queue-screen poll retries).
+  reconcileActiveOrder: async () => {
+    const { orderId } = get();
+    if (!orderId || !api.isAuthenticated()) return;
+    try {
+      const status = await api.getQueueStatus(orderId);
+      if (get().orderId !== orderId) return;
+      if (status.zone === 'done' || status.zone === 'cancelled') {
+        set({ orderId: null, orderVendorId: null, queueStatus: null, queueStatusAt: null });
+        return;
+      }
+      set({ queueStatus: status, queueStatusAt: Date.now() });
+    } catch (e) {
+      const status = (e as { status?: number }).status;
+      if ((status === 404 || status === 403) && get().orderId === orderId) {
+        set({ orderId: null, orderVendorId: null, queueStatus: null, queueStatusAt: null });
+      }
+    }
   },
   loadVendors: async () => {
     if (!api.isAuthenticated()) return;
@@ -633,6 +701,20 @@ export const useStore = create<Store>((set, get) => ({
         onDismiss: () => {},
       });
     } catch (e) {
+      // One-place guard (409): adopt the existing order the backend points at instead of erroring
+      // into a dead end — the Live queue screen is where they can pay or exit it.
+      const err = e as { status?: number; details?: Record<string, unknown> };
+      const activeId = err.status === 409 ? err.details?.orderId : undefined;
+      if (typeof activeId === 'string') {
+        set({
+          orderBusy: false,
+          orderId: activeId,
+          orderVendorId: typeof err.details?.vendorId === 'string' ? err.details.vendorId : null,
+          orderError: 'You already have an active order — open Live queue to pay or exit it first.',
+        });
+        void get().pollQueueStatus();
+        return;
+      }
       set({ orderBusy: false, orderError: (e as Error).message || 'Could not place the order.' });
     }
   },
@@ -819,6 +901,27 @@ export const useStore = create<Store>((set, get) => ({
         orderError: '',
       });
     } catch (e) {
+      // Server-side one-place guard (409): this device forgot an active order (reinstall/other
+      // device) but the backend didn't. Adopt the server's truth and flip to "View my queue".
+      const err = e as { status?: number; details?: Record<string, unknown> };
+      const activeId = err.status === 409 ? err.details?.orderId : undefined;
+      if (typeof activeId === 'string') {
+        const activeVendor = typeof err.details?.vendorId === 'string' ? err.details.vendorId : null;
+        const token =
+          (typeof err.details?.queueToken === 'string' && err.details.queueToken) ||
+          (typeof err.details?.orderNumber === 'string' && err.details.orderNumber) ||
+          'your token';
+        set({
+          joinBusy: false,
+          orderId: activeId,
+          orderVendorId: activeVendor,
+          joinAlready: true,
+          joinFarAck: false,
+          joinNotice: `You're already in a queue (${token}) — one place per customer.`,
+        });
+        void get().pollQueueStatus();
+        return;
+      }
       set({ joinBusy: false, joinNotice: (e as Error).message || 'Could not join the queue.' });
     }
   },
@@ -949,3 +1052,11 @@ export const useStore = create<Store>((set, get) => ({
   useSavedLocation: () =>
     set((s) => ({ location: `${s.address.line2 || 'Indiranagar'}, BLR`, screen: 'home' })),
 }));
+
+// Mirror every change of the active queue place to localStorage (join, pay, exit, finish,
+// logout all flow through here) so a reload restores it instead of forgetting the queue.
+useStore.subscribe((s, prev) => {
+  if (s.orderId !== prev.orderId || s.orderVendorId !== prev.orderVendorId) {
+    writeStoredActiveOrder(s.orderId, s.orderVendorId);
+  }
+});
