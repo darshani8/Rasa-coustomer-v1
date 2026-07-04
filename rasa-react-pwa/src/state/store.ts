@@ -205,6 +205,9 @@ export interface AppActions {
   placeOrderAndPay: () => Promise<void>;
   // Poll the live queue status for the current order (no-op without a real order).
   pollQueueStatus: () => Promise<void>;
+  // Pay for the current order from the queue screen (join-first: the pay window opened at the
+  // front of the line, or the customer dismissed Checkout earlier and wants to retry).
+  payCurrentOrder: () => Promise<void>;
   // join queue
   openQueueSheet: () => void;
   closeQueueSheet: () => void;
@@ -610,6 +613,29 @@ export const useStore = create<Store>((set, get) => ({
       if (get().orderId === orderId) set({ queueStatus: status, queueStatusAt: Date.now() });
     } catch {
       /* keep the previous snapshot; the next poll retries */
+    }
+  },
+
+  payCurrentOrder: async () => {
+    const { orderId, orderBusy } = get();
+    if (!orderId || orderBusy) return;
+    set({ orderBusy: true, orderError: '' });
+    try {
+      await payForOrder({
+        orderId,
+        description: 'Rasa order',
+        onConfirmed: () => {
+          void get().pollQueueStatus(); // paid → the zone flips to waiting/cooking on refresh
+        },
+        onUnavailable: () =>
+          set({ orderError: 'Online payment is not configured on the server — pay at the counter.' }),
+        onError: (m) => set({ orderError: m }),
+        onDismiss: () => {},
+      });
+    } catch (e) {
+      set({ orderError: (e as Error).message || 'Could not start the payment.' });
+    } finally {
+      set({ orderBusy: false });
     }
   },
 
