@@ -73,6 +73,8 @@ export function createOrder(input: {
   vendorId: string;
   items: Array<{ menuItemId: string; quantity: number }>;
   idempotencyKey: string;
+  customerTime?: string; // ISO datetime
+  orderType?: 'EAT_IN' | 'TAKEAWAY';
   customerLocation?: { lat: number; lng: number };
 }): Promise<BackendOrder>;
 export function getOrder(id: string): Promise<BackendOrder>;
