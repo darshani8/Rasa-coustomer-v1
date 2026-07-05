@@ -13,6 +13,10 @@ export default function Booking() {
   const placeOrderAndPay = useStore((st) => st.placeOrderAndPay);
   const orderBusy = useStore((st) => st.orderBusy);
   const orderError = useStore((st) => st.orderError);
+  const customerTime = useStore((st) => st.customerTime);
+  const orderType = useStore((st) => st.orderType);
+  const setCustomerTime = useStore((st) => st.setCustomerTime);
+  const setOrderType = useStore((st) => st.setOrderType);
 
   const v = liveV ?? getVendor(vendorId);
 
@@ -56,9 +60,45 @@ export default function Booking() {
               <rect x="3" y="4" width="18" height="18" rx="2" />
               <path d="M16 2v4M8 2v4M3 10h18" />
             </Icon>
-            <div>
-              <div style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.6px")}>Date and Time</div>
-              <div style={s("font:600 13px 'Inter';color:#3B2630;margin-top:3px")}>Saturday, Oct 14 at 7:00 PM</div>
+            <div style={s('flex:1;min-width:0')}>
+              <div style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.6px")}>Pickup Time</div>
+              <input
+                type="time"
+                value={customerTime}
+                onChange={(e) => setCustomerTime(e.target.value)}
+                style={s("margin-top:6px;font:600 14px 'Inter';color:#3B2630;background:transparent;border:1px solid #ECE6DB;border-radius:8px;padding:6px 10px;width:100%;max-width:160px;cursor:pointer")}
+              />
+              <div style={s("font:500 10.5px 'Inter';color:#9A93A6;margin-top:4px")}>Choose when you want to arrive</div>
+            </div>
+          </div>
+          <div style={s('display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid #F1EBE3')}>
+            <Icon size={19} stroke="var(--p,#7D1535)" w={2.1} css="flex-shrink:0">
+              <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </Icon>
+            <div style={s('flex:1;min-width:0')}>
+              <div style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.6px")}>Order Type</div>
+              <div style={s('display:flex;gap:8px;margin-top:8px')}>
+                <button
+                  onClick={() => setOrderType('EAT_IN')}
+                  style={s(
+                    orderType === 'EAT_IN'
+                      ? "flex:1;background:var(--p,#7D1535);color:#fff;border:none;border-radius:10px;padding:9px 12px;font:700 12px 'Inter';cursor:pointer;text-align:center"
+                      : "flex:1;background:#fff;border:1.5px solid #ECE6DB;color:#5A5368;border-radius:10px;padding:9px 12px;font:600 12px 'Inter';cursor:pointer;text-align:center"
+                  )}
+                >
+                  Eat In
+                </button>
+                <button
+                  onClick={() => setOrderType('TAKEAWAY')}
+                  style={s(
+                    orderType === 'TAKEAWAY'
+                      ? "flex:1;background:var(--p,#7D1535);color:#fff;border:none;border-radius:10px;padding:9px 12px;font:700 12px 'Inter';cursor:pointer;text-align:center"
+                      : "flex:1;background:#fff;border:1.5px solid #ECE6DB;color:#5A5368;border-radius:10px;padding:9px 12px;font:600 12px 'Inter';cursor:pointer;text-align:center"
+                  )}
+                >
+                  Takeaway
+                </button>
+              </div>
             </div>
           </div>
           <div style={s('display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid #F1EBE3')}>
