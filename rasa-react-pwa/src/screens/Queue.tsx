@@ -3,18 +3,16 @@ import { useStore } from '@/state/store';
 import { getVendor } from '@/data';
 import { fmt, orderBill } from '@/lib/money';
 import { cartSubtotal, menuGroups } from '@/state/selectors';
-import { haversineKm } from '@/lib/geo';
 import { s } from '@/lib/style';
 import { Icon } from '@/components';
 
 const backPath = 'm15 18-6-6 6-6';
 const clockPath = 'M12 12m-9 0M12 7v5l3 2';
-const carPath = 'M5.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM18.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM15 17.5H9m6-11h2l2.5 7M5.5 17.5 9 6.5h4';
 const cardPath = 'M2 5h20v14H2zM2 10h20';
 const bagPath = 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4ZM3 6h18M16 10a4 4 0 0 1-8 0';
 
 export default function Queue() {
-  const { go, vendorId, qSec, cart, add, remove, liveV, farFromVendor, schedulingPlan, orderId, orderVendorId, queueStatus, queueStatusAt, customerGeo, pollQueueStatus, payCurrentOrder, orderBusy, openExitSheet } = useStore((st) => ({
+  const { go, vendorId, qSec, cart, add, remove, liveV, orderId, orderVendorId, queueStatus, queueStatusAt, pollQueueStatus, payCurrentOrder, orderBusy, openExitSheet } = useStore((st) => ({
     go: st.go,
     vendorId: st.vendorId,
     qSec: st.qSec,
@@ -22,12 +20,9 @@ export default function Queue() {
     add: st.add,
     remove: st.remove,
     liveV: st.liveVendorById[st.vendorId],
-    farFromVendor: st.farFromVendor,
-    schedulingPlan: st.schedulingPlan,
     orderId: st.orderId,
     queueStatus: st.queueStatus,
     queueStatusAt: st.queueStatusAt,
-    customerGeo: st.customerGeo,
     pollQueueStatus: st.pollQueueStatus,
     payCurrentOrder: st.payCurrentOrder,
     orderBusy: st.orderBusy,
@@ -135,22 +130,6 @@ export default function Queue() {
     };
   })();
 
-  // REAL plan (when the backend scheduled this order): countdown to leaveByAt, live. The sub-line
-  // carries the live distance to the vendor when both GPS fixes are known.
-  const vendorGeo = queueStatus?.vendorLocation ?? liveV?.geo ?? null;
-  const distanceKm = customerGeo && vendorGeo ? haversineKm(customerGeo, vendorGeo) : null;
-  const live = (() => {
-    if (!schedulingPlan) return null;
-    const msLeft = Date.parse(schedulingPlan.leaveByAt) - Date.now();
-    const leaveNow = schedulingPlan.instruction === 'leave_now' || msLeft <= 0;
-    return {
-      big: leaveNow ? 'Now' : Math.max(1, Math.round(msLeft / 60000)) + ' min',
-      sub:
-        (leaveNow ? 'head over' : 'live travel estimate') +
-        (distanceKm !== null ? ` · ${distanceKm.toFixed(1)} km` : ''),
-    };
-  })();
-
   const queueItems = useMemo(() => v.items.map((i) => ({ ...i, priceLabel: fmt(i.price), onAdd: () => add(i.id) })), [v, add]);
 
   const { comboItems, comboAnchor } = useMemo(() => {
@@ -223,7 +202,7 @@ export default function Queue() {
           )}
         </div>
 
-        <div style={s('display:grid;grid-template-columns:1.15fr .85fr;gap:11px;margin-top:14px')}>
+        <div style={s('display:grid;grid-template-columns:1fr;gap:11px;margin-top:14px')}>
           <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:16px;overflow:hidden')}>
             <div style={s('display:flex;align-items:center;justify-content:space-between')}>
               <div style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px")}>Estimated wait</div>
@@ -234,43 +213,14 @@ export default function Queue() {
             <div style={s("font:700 38px var(--display,'Space Grotesk');color:#3B2630;margin-top:18px;line-height:1;letter-spacing:1px")}>{notJoined ? '—' : real ? real.qTime : qTime}</div>
             <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:6px")}>minutes remaining</div>
           </div>
-          {farFromVendor === true && !live ? (
-            /* Local distance says far AND the backend produced no plan: no travel estimate exists,
-               so guide the customer to self-pace off the live queue number. A real backend plan
-               (authoritative) always wins over the client's local radius guess. */
-            <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:16px;display:flex;flex-direction:column;align-items:flex-start')}>
-              <div style={s('display:flex;align-items:center;justify-content:space-between;width:100%')}>
-                <div style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px")}>Travel tracking off</div>
-                <div style={s('width:30px;height:30px;border-radius:50%;background:#F4EEE7;display:flex;align-items:center;justify-content:center;flex-shrink:0')}>
-                  <Icon size={16} stroke="#B0A9BC" w={2.2} round d={carPath} />
-                </div>
-              </div>
-              <div style={s("font:500 10.5px 'Inter';color:#6F6A7D;margin-top:12px;line-height:1.5")}>
-                You&rsquo;re far from the truck &mdash; watch your queue number and reach <b style={s('color:#3B2630')}>5&ndash;10 min</b> before your turn.
-              </div>
-            </div>
-          ) : (
-            <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:16px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between')}>
-              <div style={s('display:flex;align-items:center;justify-content:space-between;width:100%')}>
-                <div style={s("font:600 9px 'JetBrains Mono',monospace;color:#A39BB0;text-transform:uppercase;letter-spacing:.5px")}>Leave in</div>
-                <div style={s('width:30px;height:30px;border-radius:50%;background:var(--psoft,#F7E9EC);display:flex;align-items:center;justify-content:center')}>
-                  <Icon size={16} stroke="var(--p,#7D1535)" w={2.2} round d={carPath} />
-                </div>
-              </div>
-              <div style={s('margin-top:auto')}>
-                <div style={s("font:700 24px var(--display,'Space Grotesk');color:#3B2630;line-height:1;margin-top:18px")}>{live ? live.big : leaveBigLabel}</div>
-                <div style={s("font:500 10px 'Inter';color:#9A93A6;margin-top:5px")}>{live ? live.sub : leaveSub}</div>
-              </div>
-            </div>
-          )}
         </div>
 
         <div style={s('background:#fff;border:1px solid #ECE6DB;border-radius:var(--radXL,20px);padding:20px 18px;margin-top:14px;position:relative')}>
           <div style={s('position:absolute;left:36px;top:30px;bottom:30px;width:2px;background:#EFE9DF')} />
           {[
-            { label: 'Waiting Zone', done: !notJoined, icon: clockPath },
-            { label: 'Payment Zone', done: !notJoined && (real ? real.paymentReached : false), icon: cardPath },
-            { label: 'Collection Zone', done: !notJoined && (real ? real.collectionReached : false), icon: bagPath },
+            { label: 'In Queue', done: !notJoined, icon: clockPath },
+            { label: 'Being Prepared', done: !notJoined && (real ? real.paymentReached : false), icon: cardPath },
+            { label: 'Ready for Pickup', done: !notJoined && (real ? real.collectionReached : false), icon: bagPath },
           ].map((step) => (
             <div key={step.label} style={s('display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:22px')}>
               <div style={s('display:flex;align-items:center;gap:13px')}>
