@@ -372,13 +372,19 @@ export function requestGeoLocation() {
  * With a location the order is 'online' (ready-on-arrival); without one it is 'offline' (no
  * location required). The caller never sends prices. Returns the created Order (201).
  */
-export async function createOrder({ vendorId, items, idempotencyKey, customerLocation }) {
+export async function createOrder({ vendorId, items, idempotencyKey, customerLocation, customerTime, orderType }) {
   if (!idempotencyKey) throw new Error('createOrder requires an idempotencyKey');
   // pay_in_app: the customer pays online via Razorpay Checkout (see the payments section below). The
   // gateway order is opened for the order regardless of intent; this signals the online-first flow.
-  const body = customerLocation
+  const base = customerLocation
     ? { vendorId, channel: 'online', paymentIntent: 'pay_in_app', customerLocation, items }
     : { vendorId, channel: 'offline', paymentIntent: 'pay_in_app', items };
+  // Pass through optional time picker + order type fields when present
+  const body = {
+    ...base,
+    ...(customerTime ? { customerTime } : {}),
+    ...(orderType ? { orderType } : {}),
+  };
   return request('/orders', {
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
