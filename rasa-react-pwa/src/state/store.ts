@@ -239,6 +239,8 @@ export interface AppState {
   myOrders: MyOrderRow[] | null;
   myOrdersLoading: boolean;
   myOrdersError: string;
+  clearMyOrdersBusy: boolean;
+  clearMyOrdersError: string;
   // Ratings submitted from the order-history cards (POST /ratings), keyed by orderId.
   ratingResults: Record<string, { status: 'recorded' | 'already_rated' | 'error'; stars?: number; message?: string }>;
   rateBusyOrderId: string | null;
@@ -409,6 +411,8 @@ export interface AppActions {
   setOrderSort: (k: OrderSort) => void;
   // Fetch the customer's real order history (GET /me/orders). No-op when signed out.
   loadMyOrders: () => Promise<void>;
+  // Clear the customer's completed/cancelled order history (DELETE /me/orders).
+  clearMyOrders: () => Promise<void>;
   // Rate a collected/completed order (POST /ratings).
   submitOrderRating: (orderId: string, stars: number, comment?: string) => Promise<void>;
   // Toggle a vendor in/out of the locally-saved favourites set.
@@ -460,6 +464,8 @@ const initialState: AppState = {
   myOrders: null,
   myOrdersLoading: false,
   myOrdersError: '',
+  clearMyOrdersBusy: false,
+  clearMyOrdersError: '',
   ratingResults: {},
   rateBusyOrderId: null,
   bankOpen: false,
@@ -1250,6 +1256,16 @@ export const useStore = create<Store>((set, get) => ({
       set({ myOrders: res.data ?? [], myOrdersLoading: false });
     } catch (e) {
       set({ myOrders: null, myOrdersLoading: false, myOrdersError: (e as Error).message || 'Could not load your orders.' });
+    }
+  },
+  // Clear the customer's completed/cancelled order history (DELETE /me/orders).
+  clearMyOrders: async () => {
+    set({ clearMyOrdersBusy: true, clearMyOrdersError: '' });
+    try {
+      await api.clearMyOrders();
+      set({ myOrders: [], clearMyOrdersBusy: false });
+    } catch (e: any) {
+      set({ clearMyOrdersError: e.message || 'Failed to clear history', clearMyOrdersBusy: false });
     }
   },
   // POST /ratings from an order-history card. One in flight at a time (rateBusyOrderId gates the

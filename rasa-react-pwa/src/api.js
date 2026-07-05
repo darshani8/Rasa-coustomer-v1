@@ -547,3 +547,13 @@ export async function resetPassword({ phone, otp, newPassword }) {
     body: JSON.stringify({ phone, otp, newPassword }),
   });
 }
+
+// ---- clear order history -------------------------------------------------
+
+/**
+ * DELETE /me/orders — clear the authenticated customer's completed/cancelled order history.
+ * Returns { cleared: number, message: string }
+ */
+export async function clearMyOrders() {
+  return request('/me/orders', { method: 'DELETE' });
+}
