@@ -324,6 +324,9 @@ export interface AppState {
   queueStatusAt: number | null;
   // The one-shot GPS captured at order time; used to show the live distance to the vendor.
   customerGeo: { lat: number; lng: number } | null;
+  // Time picker + order type
+  customerTime: string; // HH:MM format, e.g. "19:30"
+  orderType: 'EAT_IN' | 'TAKEAWAY';
   orderBusy: boolean;
   orderError: string;
 }
@@ -367,6 +370,9 @@ export interface AppActions {
   // Pay for the current order from the queue screen (join-first: the pay window opened at the
   // front of the line, or the customer dismissed Checkout earlier and wants to retry).
   payCurrentOrder: () => Promise<void>;
+  // Time picker + order type
+  setCustomerTime: (time: string) => void;
+  setOrderType: (type: 'EAT_IN' | 'TAKEAWAY') => void;
   // join queue
   openQueueSheet: () => void;
   closeQueueSheet: () => void;
@@ -512,6 +518,9 @@ const initialState: AppState = {
   queueStatus: null,
   queueStatusAt: null,
   customerGeo: null,
+  // Time picker + order type
+  customerTime: '19:00',
+  orderType: 'TAKEAWAY' as 'EAT_IN' | 'TAKEAWAY',
   orderBusy: false,
   orderError: '',
 };
@@ -802,6 +811,7 @@ export const useStore = create<Store>((set, get) => ({
       /* backend unreachable → keep the mock demo */
     }
   },
+
   placeOrderAndPay: async () => {
     if (!api.isAuthenticated()) {
       set({ screen: 'login', authError: 'Please sign in to pay.' });
@@ -835,10 +845,16 @@ export const useStore = create<Store>((set, get) => ({
         const geo = await api.requestGeoLocation();
         const vendorGeo = get().liveVendorById[vendorId]?.geo ?? null;
         set({ farFromVendor: geo && vendorGeo ? isFarFromVendor(geo, vendorGeo) : null, customerGeo: geo });
+        // Build customerTime as today's date + selected time
+        const now = new Date();
+        const [h, m] = get().customerTime.split(':').map(Number);
+        const customerTimeDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
         const order = await api.createOrder({
           vendorId,
           items,
           idempotencyKey: newIdemKey(),
+          customerTime: customerTimeDate.toISOString(),
+          orderType: get().orderType,
           ...(geo ? { customerLocation: geo } : {}),
         });
         id = order.id;
@@ -924,6 +940,10 @@ export const useStore = create<Store>((set, get) => ({
     }
   },
 
+  // Time picker + order type
+  setCustomerTime: (time) => set({ customerTime: time }),
+  setOrderType: (type) => set({ orderType: type }),
+
   openExitSheet: () => set({ exitSheet: true }),
   closeExitSheet: () => set({ exitSheet: false }),
   // Confirmed exit (unpaid orders only — the backend enforces created → cancelled). Frees the
@@ -953,7 +973,6 @@ export const useStore = create<Store>((set, get) => ({
       });
     }
   },
-
 
   openQueueSheet: () => set({ queueSheet: true, joinNotice: null, joinFarAck: false, joinAlready: false }),
   closeQueueSheet: () => set({ queueSheet: false, joinNotice: null, joinFarAck: false, joinAlready: false }),
@@ -1050,10 +1069,16 @@ export const useStore = create<Store>((set, get) => ({
         });
         return;
       }
+      // Build customerTime as today's date + selected time
+      const now = new Date();
+      const [h, m] = get().customerTime.split(':').map(Number);
+      const customerTimeDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
       const order = await api.createOrder({
         vendorId,
         items,
         idempotencyKey: newIdemKey(),
+        customerTime: customerTimeDate.toISOString(),
+        orderType: get().orderType,
         customerLocation: geo,
       });
       set({
