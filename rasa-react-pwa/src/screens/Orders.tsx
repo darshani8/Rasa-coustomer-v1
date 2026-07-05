@@ -50,6 +50,9 @@ export default function Orders() {
     ratingResults,
     rateBusyOrderId,
     submitOrderRating,
+    clearMyOrders,
+    clearMyOrdersBusy,
+    clearMyOrdersError,
   } = useStore((st) => ({
     go: st.go,
     filter: st.orderFilter,
@@ -68,6 +71,9 @@ export default function Orders() {
     ratingResults: st.ratingResults,
     rateBusyOrderId: st.rateBusyOrderId,
     submitOrderRating: st.submitOrderRating,
+    clearMyOrders: st.clearMyOrders,
+    clearMyOrdersBusy: st.clearMyOrdersBusy,
+    clearMyOrdersError: st.clearMyOrdersError,
   }));
 
   // Inline rate affordance state — local to this screen, never persisted.
@@ -120,8 +126,27 @@ export default function Orders() {
           <Icon size={18} stroke="#3B2630" w={2.4} d={backPath} />
         </button>
         <span style={s("font:700 17px var(--display,'Space Grotesk');color:#3B2630;letter-spacing:-.3px")}>Order History</span>
-        <div style={s('width:36px;height:36px')} />
+        {orders.length > 0 && (
+          <button
+            onClick={() => {
+              if (confirm('Clear all completed and cancelled orders from your history?')) {
+                void clearMyOrders();
+              }
+            }}
+            disabled={clearMyOrdersBusy}
+            style={s('background:none;border:none;cursor:pointer;font:600 11px "Inter";color:#C0392B;padding:6px 10px;disabled:opacity:.5')}
+          >
+            {clearMyOrdersBusy ? 'Clearing…' : 'Clear All'}
+          </button>
+        )}
+        {orders.length === 0 && <div style={s('width:36px;height:36px')} />}
       </div>
+
+      {clearMyOrdersError && (
+        <div style={s('padding:0 18px 8px')}>
+          <div style={s('background:#FBE7EC;color:#C0392B;border-radius:10px;padding:10px 14px;font:600 12px "Inter"')}>{clearMyOrdersError}</div>
+        </div>
+      )}
 
       <div style={s('display:flex;align-items:center;gap:9px;padding:12px 18px 14px;position:relative;z-index:30')}>
         <button onClick={() => setOrderFilter('all')} style={s(tabStyle('all'))}>All Orders</button>
